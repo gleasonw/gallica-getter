@@ -5,7 +5,7 @@ I hope to make this API easy to setup and deploy anywhere.
 
 Install the dependencies:
 
-Set up the venv in your working directory:
+Set up the venv in the cloned directory:
 ```
 virtualenv venv
 ```
