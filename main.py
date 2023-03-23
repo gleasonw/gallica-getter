@@ -29,9 +29,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
 from contextSearchArgs import ContextSearchArgs
 
-RECORD_LIMIT = 1000000
-MAX_DB_SIZE = 10000000
-
 app = FastAPI()
 
 origins = ["*"]
@@ -43,118 +40,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-requestID = random.randint(0, 1000000000)
-
 
 @app.get("/")
 def index():
     return {"message": "ok"}
-
-
-@app.post("/api/init")
-def init(ticket: Ticket):
-    global requestID
-    requestID += 1
-    ticket.id = requestID
-    with build_redis_conn() as redis_conn:
-        redis_conn.delete(f"request:{requestID}:progress")
-        redis_conn.delete(f"request:{requestID}:cancelled")
-    request = Request(ticket=ticket)
-    request.start()
-    return {"requestid": requestID}
-
-
-@app.get("/poll/progress/{request_id}")
-def poll_request_state(request_id: str):
-    with build_redis_conn() as redis_conn:
-        progress = redis_conn.get(f"request:{request_id}:progress")
-        if progress:
-            progress = json.loads(progress)
-            progress = Progress(**progress)
-        else:
-            progress = Progress(
-                num_results_discovered=0,
-                num_requests_to_send=0,
-                num_requests_sent=0,
-                estimate_seconds_to_completion=0,
-                random_paper="",
-                random_text="",
-                state="running",
-                backend_source="gallica",
-            )
-    return progress
-
-
-class Paper(BaseModel):
-    title: str
-    code: str
-    start_date: str
-    end_date: str
-
-
-@app.get("/api/papers/{keyword}")
-def papers(keyword: str):
-    """Paper search dropdown route"""
-    with build_db_conn() as conn:
-        keyword = keyword.lower()
-        with conn.cursor() as curs:
-            curs.execute(
-                """
-                SELECT title, code, startdate, enddate
-                    FROM papers 
-                    WHERE LOWER(title) LIKE %(paper_name)s
-                    ORDER BY title DESC LIMIT 20;
-            """,
-                {"paper_name": "%" + keyword + "%"},
-            )
-            similar_papers = curs.fetchall()
-            papers = [
-                Paper(
-                    title=paper[0],
-                    code=paper[1],
-                    start_date=paper[2],
-                    end_date=paper[3],
-                )
-                for paper in similar_papers
-            ]
-    return {"papers": papers}
-
-
-@app.get("/api/numPapersOverRange/{start}/{end}")
-def get_num_papers_over_range(start: int, end: int):
-    """Number of papers that published in a year between start and end."""
-    with build_db_conn() as conn:
-        with conn.cursor() as curs:
-            curs.execute(
-                """
-                SELECT COUNT(*) FROM papers
-                    WHERE startdate BETWEEN %s AND %s
-                        OR enddate BETWEEN %s AND %s
-                        OR (startdate < %s AND enddate > %s)
-                    ;
-                """,
-                (start, end, start, end, start, end),
-            )
-            num_papers_over_range = curs.fetchone()
-        count = num_papers_over_range and num_papers_over_range[0]
-    return count
-
-
-@app.get("/api/graphData")
-def graph_data(
-    request_id: int,
-    grouping: Literal["month", "year"] = "year",
-    backend_source: Literal["gallica", "pyllica"] = "pyllica",
-    average_window: int = 0,
-):
-    with build_db_conn() as conn:
-        return build_highcharts_series(
-            request_id=request_id,
-            grouping=grouping,
-            backend_source=backend_source,
-            average_window=average_window,
-            conn=conn,
-        )
 
 
 @app.get("/api/pageText")
