@@ -1,0 +1,606 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<srw:searchRetrieveResponse xmlns:ns6="http://gallica.bnf.fr/namespaces/gallica/" xmlns:diag="http://www.loc.gov/zing/srw/diagnostic/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:srw="http://www.loc.gov/zing/srw/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <srw:version>1.2</srw:version>
+    <srw:echoedSearchRetrieveRequest>
+        <srw:topPapersQuery>(dc.type all "fascicule")</srw:topPapersQuery>
+        <srw:version>1.2</srw:version>
+    </srw:echoedSearchRetrieveRequest>
+    <srw:numberOfRecords>18509</srw:numberOfRecords>
+    <srw:extraResponseData>&lt;numberOfRecordsDecollapser&gt;5332464&lt;/numberOfRecordsDecollapser&gt;</srw:extraResponseData>
+    <srw:records>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>19??</dc:date>
+                    <dc:description>Etat de collection : 1916-1917 (N27 et 29)</dc:description>
+                    <dc:format>Nombre total de vues : 8</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb32699739p/date</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:language>français</dc:language>
+                    <dc:publisher> (S. l.)</dc:publisher>
+                    <dc:relation>Notice d'ensemble : http://catalogue.bnf.fr/ark:/12148/cb32699739p</dc:relation>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb32699739p</dc:relation>
+                    <dc:source>Bibliothèque nationale de France, département Fonds du service reproduction, 8-Lc6-633</dc:source>
+                    <dc:title>L'Anti-cafard. Revue anti-boche, publiée très irrégulièrement avec le concours de toutes les bonnes volontés</dc:title>
+                    <dc:title>L'Anti-cafard. Revue anti-boche, publiée très irrégulièrement avec le concours de toutes les bonnes volontés</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>0</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/btv1b550055958.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb32699739p/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/btv1b550055958.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/btv1b550055958.medres</medres>
+                <nqamoyen>0.0</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/btv1b550055958.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>btv1b550055958</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:contributor>Supremo conselho para Portugal. Éditeur scientifique</dc:contributor>
+                    <dc:date>1913-????</dc:date>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb339033288/date</dc:identifier>
+                    <dc:language>por</dc:language>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb339033288</dc:relation>
+                    <dc:source>Bibliothèque nationale de France, département Philosophie, histoire, sciences de l'homme, 8-H-9974 (1916-1917)</dc:source>
+                    <dc:title>Memoria dos seus trabalhos...</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>1</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k991694r.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb339033288/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k991694r.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k991694r.medres</medres>
+                <nqamoyen>86.38</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k991694r.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k991694r</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1854-1870</dc:date>
+                    <dc:description>Avec mode texte</dc:description>
+                    <dc:format>Nombre total de vues : 1211</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb387197736/date</dc:identifier>
+                    <dc:identifier>ISSN 19599587</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:language>français</dc:language>
+                    <dc:publisher>A. Houssiaux (Paris)</dc:publisher>
+                    <dc:publisher>Collignon (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb387197736</dc:relation>
+                    <dc:source>Bibliothèque nationale de France, département Littérature et art, V-12400-12416</dc:source>
+                    <dc:title>Almanach musical pour ... (Paris. 1854)</dc:title>
+                    <dc:title>Almanach musical pour ... : éphémérides musicales, biographies des célébrités de la musique / [par Moléri ["puis" Molé] et Oscar Comettant]</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>2</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k62030330.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb387197736/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k62030330.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k62030330.medres</medres>
+                <nqamoyen>99.79</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k62030330.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k62030330</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1915-1918</dc:date>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb386884277/date</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb386884277</dc:relation>
+                    <dc:source>Ville de Paris / Bibliothèque historique, BHVP, 2014-12180</dc:source>
+                    <dc:title>Marmita, Revue Hebdomadaire anecdotique, humoristique, fantaisiste du 267e...</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>3</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k6582257q.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb386884277/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k6582257q.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k6582257q.medres</medres>
+                <nqamoyen>99.93</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k6582257q.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k6582257q</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Secours populaire français. Auteur du texte</dc:creator>
+                    <dc:date>1952-1953</dc:date>
+                    <dc:description>Avec mode texte</dc:description>
+                    <dc:format>Nombre total de vues : 4</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb45393119z/date</dc:identifier>
+                    <dc:identifier>ISSN 27773582</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>Secours populaire français (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb45393119z</dc:relation>
+                    <dc:relation>A pour reproduction : Les Échos (Secours populaire Français. Reproduction numérique) = ISSN 2777-3574 (http://gallicaintramuros.bnf.fr/ark:/12148/cb45393119z/date)</dc:relation>
+                    <dc:source>Secours populaire français (SPF), 2017-213802</dc:source>
+                    <dc:title>Les Échos (Secours populaire Français)</dc:title>
+                    <dc:title>Les Échos : bulletin... / Secours populaire Français</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>4</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k9806602h.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb45393119z/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k9806602h.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k9806602h.medres</medres>
+                <nqamoyen>90.98</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k9806602h.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k9806602h</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Gymnase lyrique. Auteur du texte</dc:creator>
+                    <dc:date>1825-1840</dc:date>
+                    <dc:description>Périodicité : Annuel ; bi-mensuel ? (1840)</dc:description>
+                    <dc:description>Contient une table des matières</dc:description>
+                    <dc:description>Avec mode texte</dc:description>
+                    <dc:format>Nombre total de vues : 315</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb416530906/date</dc:identifier>
+                    <dc:identifier>ISSN 27807428</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>Jehenne, libraire (Paris)</dc:publisher>
+                    <dc:publisher>Collinet fils et Marcillac (Paris)</dc:publisher>
+                    <dc:publisher>Jehenne, libraireJehenne, libraire (Paris)</dc:publisher>
+                    <dc:publisher>Lejai, libraireLejai, libraire (Paris)</dc:publisher>
+                    <dc:publisher>Dondey-Dupré père et fils, éditeursDondey-Dupré père et fils, éditeurs (Paris)</dc:publisher>
+                    <dc:publisher>Lavavasseur, éditeurLavavasseur, éditeur (Paris)</dc:publisher>
+                    <dc:publisher>Carpentier, libraireCarpentier, libraire (Paris)</dc:publisher>
+                    <dc:publisher>AudinAudin (Paris)</dc:publisher>
+                    <dc:publisher>TerryTerry (Paris)</dc:publisher>
+                    <dc:publisher>Tesson succ. de Terry libraireTesson succ. de Terry libraire (Paris)</dc:publisher>
+                    <dc:publisher>Jules BerrierJules Berrier (Paris)</dc:publisher>
+                    <dc:publisher>Ernest BourdinErnest Bourdin (Paris)</dc:publisher>
+                    <dc:publisher>Mme Goullet libraireMme Goullet libraire (Paris)</dc:publisher>
+                    <dc:publisher>chez l'éditeurchez l'éditeur (Paris)</dc:publisher>
+                    <dc:publisher>Librairie d'Aug. Bocquet et LucetLibrairie d'Aug. Bocquet et Lucet (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb416530906</dc:relation>
+                    <dc:relation>A pour reproduction : Gymnase lyrique (Reproduction numérique) = ISSN 2781-5765 (https://gallica.bnf.fr/ark:/12148/cb416530906/date)</dc:relation>
+                    <dc:source>Bibliothèque nationale de France, YE-11789</dc:source>
+                    <dc:title>Gymnase lyrique : recueil de chansons et autres poèsies inédites</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>5</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k9736688m.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb416530906/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k9736688m.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k9736688m.medres</medres>
+                <nqamoyen>98.5</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k9736688m.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k9736688m</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1918-1924</dc:date>
+                    <dc:description>Appartient à l’ensemble documentaire : GG14181</dc:description>
+                    <dc:description>Appartient à l’ensemble documentaire : PACA1</dc:description>
+                    <dc:description>Avec mode texte</dc:description>
+                    <dc:format>Nombre total de vues : 22</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb38725602n/date</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:language>français</dc:language>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb38725602n</dc:relation>
+                    <dc:source>Ville de Paris / Bibliothèque historique, BHVP, 2013-301463</dc:source>
+                    <dc:title>Artistique-Revue, organe officiel de "Nos marionnettes" paraissant le 20 de chaque mois (le 5 et le 20 pendant l'hiver). Directeur : A. Courmes, 17, rue de la Paix, Nice. Directeur : F. Hauët, 58, avenue de la Victoire, Nice, à partir de mai 1921</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>6</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k6557525h.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb38725602n/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k6557525h.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k6557525h.medres</medres>
+                <nqamoyen>99.93</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k6557525h.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k6557525h</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:contributor>Bourlier, Nicolas Charles. Rédacteur</dc:contributor>
+                    <dc:date>1860-186.</dc:date>
+                    <dc:description>Périodicité : Mensuel</dc:description>
+                    <dc:description>Etat de collection : |a. 1 (1860, janv./févr.)</dc:description>
+                    <dc:description>Avec mode texte</dc:description>
+                    <dc:format>Nombre total de vues : 46</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb45382243n/date</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>chez le propriétaire rédacteur (Alger)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb45382243n</dc:relation>
+                    <dc:source>Bibliothèque nationale de France, département Sciences et techniques, S-33632</dc:source>
+                    <dc:title>Revue horticole de l'Algérie (Alger)</dc:title>
+                    <dc:title>Revue horticole de l'Algérie : journal de botanique appliqué à l'agriculture, l'horticulture, la médecine et l'industrie / rédigé par M. Charles Bourlier,...</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>7</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k9774955r.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb45382243n/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k9774955r.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k9774955r.medres</medres>
+                <nqamoyen>98.51</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k9774955r.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k9774955r</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Société d'anthropologie de Paris. Auteur du texte</dc:creator>
+                    <dc:date>1900-2020</dc:date>
+                    <dc:description>Etat de collection : 1940/45-série 10, t. 10 (1959), tables 1900-1959 (1961)</dc:description>
+                    <dc:description>Périodiques</dc:description>
+                    <dc:format>Nombre total de vues : 5515</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb34349269z/date</dc:identifier>
+                    <dc:identifier>ISSN 00378984</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>Société d'anthropologie (Paris)</dc:publisher>
+                    <dc:publisher>Masson (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb34349269z</dc:relation>
+                    <dc:source>Bibliothèque nationale de France, département Centre technique du livre, 8-T-46</dc:source>
+                    <dc:subject>Médecine -- Associations</dc:subject>
+                    <dc:title>Bulletins et Mémoires de la Société d'anthropologie de Paris</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>8</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k639639.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb34349269z/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k639639.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k639639.medres</medres>
+                <nqamoyen>0.0</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k639639.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k639639</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Association internationale des résidents de la Cité universitaire de Paris. Auteur du texte</dc:creator>
+                    <dc:date>1964-1964</dc:date>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb452696206/date</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:language>français</dc:language>
+                    <dc:publisher>Association internationale des résidents de la Cité universitaire de Paris (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb452696206</dc:relation>
+                    <dc:source>Cité Internationale Universitaire de Paris, 2017-117907</dc:source>
+                    <dc:title>Aircup : informations de la Cité internationale / Association internationale des résidents de la Cité universitaire de Paris</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>9</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k9785635j.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb452696206/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k9785635j.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k9785635j.medres</medres>
+                <nqamoyen>98.53</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k9785635j.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k9785635j</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1907</dc:date>
+                    <dc:description>Périodicité : Mensuel</dc:description>
+                    <dc:description>Etat de collection : Janv. -août 1914 ; mai, nov. et déc. 1915 ; 1917 (mq. juin et juil.) ; 1918-1919</dc:description>
+                    <dc:description>Appartient à l’ensemble documentaire : GG14181</dc:description>
+                    <dc:description>Appartient à l’ensemble documentaire : RhoneAlp1</dc:description>
+                    <dc:format>Nombre total de vues : 804</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb42768809f/date</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:language>français</dc:language>
+                    <dc:publisher>F. Rouet ()</dc:publisher>
+                    <dc:source>Bibliothèque nationale de France, département Philosophie, histoire, sciences de l'homme, BP-1 (VALENCE 26, CATHEDRALE)</dc:source>
+                    <dc:subject>Guerre mondiale (1914-1918) -- Aspect religieux</dc:subject>
+                    <dc:title>Bulletin paroissial (Valence (Drôme), Paroisse de la cathédrale)</dc:title>
+                    <dc:title>Bulletin paroissial mensuel de la cathédrale de Valence</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>10</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k1153368b.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb42768809f/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k1153368b.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k1153368b.medres</medres>
+                <nqamoyen>88.36</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k1153368b.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k1153368b</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Action française. Auteur du texte</dc:creator>
+                    <dc:date>1909-1938</dc:date>
+                    <dc:description>Etat de collection : 1910-1919 ; 1921-1926 ; 1928-1936</dc:description>
+                    <dc:description>Avec mode texte</dc:description>
+                    <dc:format>Nombre total de vues : 7927</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb32686697n/date</dc:identifier>
+                    <dc:identifier>ISSN 09959653</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:language>français</dc:language>
+                    <dc:publisher> (Paris)</dc:publisher>
+                    <dc:publisher>Nouvelle librairie nationale (Paris)</dc:publisher>
+                    <dc:publisher>Librairie de l'Action française (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb32686697n</dc:relation>
+                    <dc:source>Bibliothèque nationale de France</dc:source>
+                    <dc:title>Almanach de l'Action française</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>11</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k941181h.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb32686697n/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k941181h.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k941181h.medres</medres>
+                <nqamoyen>0.0</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k941181h.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k941181h</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1915-1916</dc:date>
+                    <dc:description>Périodicité : Hebdomadaire (irrégulier)</dc:description>
+                    <dc:format>Nombre total de vues : 41</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb370153624/date</dc:identifier>
+                    <dc:identifier>ISSN 27261972</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:language>français</dc:language>
+                    <dc:publisher> (Tranchées du Vallon)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb370153624</dc:relation>
+                    <dc:source>Bibliothèque nationale de France, département Réserve des livres rares, 4-LC6-257</dc:source>
+                    <dc:title>La Gazette des boyaux : organe de la 4ème Cie du 124ème de ligne / réd. en chef et fondateur Géo Bodio</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>12</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/btv1b55000548t.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb370153624/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/btv1b55000548t.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/btv1b55000548t.medres</medres>
+                <nqamoyen>0.0</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/btv1b55000548t.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>btv1b55000548t</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Cité internationale universitaire (Paris). Auteur du texte</dc:creator>
+                    <dc:date>1998</dc:date>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb45266005x/date</dc:identifier>
+                    <dc:identifier>ISSN 27817717</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>Cité internationale universitaire de Paris (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb45266005x</dc:relation>
+                    <dc:source>Cité Internationale Universitaire de Paris, 2017-114814</dc:source>
+                    <dc:title>Rapport annuel (Cité internationale universitaire de Paris)</dc:title>
+                    <dc:title>Rapport annuel... / Cité internationale universitaire de Paris</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>13</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k9786812j.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb45266005x/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k9786812j.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k9786812j.medres</medres>
+                <nqamoyen>98.63</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k9786812j.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k9786812j</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Secours populaire français. Auteur du texte</dc:creator>
+                    <dc:date>1953-1954</dc:date>
+                    <dc:description>Périodicité : Mensuel</dc:description>
+                    <dc:description>Avec mode texte</dc:description>
+                    <dc:format>Nombre total de vues : 8</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb45393434p/date</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>Secours populaire français (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb45393434p</dc:relation>
+                    <dc:source>Secours populaire français (SPF), 2017-214913</dc:source>
+                    <dc:title>Discutons (Paris)</dc:title>
+                    <dc:title>Discutons : bulletin... / Secours populaire français</dc:title>
+                    <dc:type>text</dc:type>
+                    <dc:type>texte</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>14</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k98116435.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/cb45393434p/date</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k98116435.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k98116435.medres</medres>
+                <nqamoyen>98.5</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k98116435.thumbnail</thumbnail>
+                <typedoc>periodiques</typedoc>
+                <uri>bpt6k98116435</uri>
+            </srw:extraRecordData>
+        </srw:record>
+    </srw:records>
+    <srw:nextRecordPosition>16</srw:nextRecordPosition>
+</srw:searchRetrieveResponse>

@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<srw:searchRetrieveResponse xmlns:ns6="http://gallica.bnf.fr/namespaces/gallica/" xmlns:diag="http://www.loc.gov/zing/srw/diagnostic/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:srw="http://www.loc.gov/zing/srw/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <srw:version>1.2</srw:version>
+    <srw:echoedSearchRetrieveRequest>
+        <srw:topPapersQuery>(dc.type all "fascicule") and (gallica all "brazza")</srw:topPapersQuery>
+        <srw:version>1.2</srw:version>
+    </srw:echoedSearchRetrieveRequest>
+    <srw:numberOfRecords>78514</srw:numberOfRecords>
+    <srw:extraResponseData>&lt;numberOfRecordsDecollapser&gt;78514&lt;/numberOfRecordsDecollapser&gt;</srw:extraResponseData>
+    <srw:records>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>France. Ministère de la marine et des colonies. Auteur du texte</dc:creator>
+                    <dc:date>1883-04</dc:date>
+                    <dc:description> avril 1883</dc:description>
+                    <dc:description>1883/04 (T77)-1883/06.</dc:description>
+                    <dc:description/>
+                    <dc:description>Appartient à l’ensemble documentaire : FranceJp0</dc:description>
+                    <dc:format>Nombre total de vues : 100710</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k34565h</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>Librairie de L. Hachette (Paris)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb32860483w</dc:relation>
+                    <dc:relation>https://gallica.bnf.fr/ark:/12148/cb32860483w/date</dc:relation>
+                    <dc:rights>domaine public</dc:rights>
+                    <dc:rights>public domain</dc:rights>
+                    <dc:source>Bibliothèque nationale de France</dc:source>
+                    <dc:title>Revue maritime et coloniale / Ministère de la marine et des colonies</dc:title>
+                    <dc:type>texte</dc:type>
+                    <dc:type>text</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>0</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k34565h.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/bpt6k34565h</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k34565h.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k34565h.medres</medres>
+                <nqamoyen>0.0</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k34565h.thumbnail</thumbnail>
+                <typedoc>fascicules</typedoc>
+                <uri>bpt6k34565h</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1911??gai-20</dc:date>
+                    <dc:description>20 juin 1911</dc:description>
+                    <dc:description>1911/06/20 (A12,N4022,SER3).</dc:description>
+                    <dc:description/>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k50278259</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>[s.n.] (Alger)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb328263310</dc:relation>
+                    <dc:relation>https://gallica.bnf.fr/ark:/12148/cb328263310/date</dc:relation>
+                    <dc:rights>domaine public</dc:rights>
+                    <dc:rights>public domain</dc:rights>
+                    <dc:source>Bibliothèque nationale de France, département Droit, économie, politique, JO-87092</dc:source>
+                    <dc:title>Les Nouvelles : journal quotidien du soir</dc:title>
+                    <dc:type>texte</dc:type>
+                    <dc:type>text</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>1</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k50278259.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/bpt6k50278259</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k50278259.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k50278259.medres</medres>
+                <nqamoyen>82.91</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k50278259.thumbnail</thumbnail>
+                <typedoc>fascicules</typedoc>
+                <uri>bpt6k50278259</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:contributor>Houssaye, Henri (1853-1919). Directeur de publication</dc:contributor>
+                    <dc:date>1882-07-29</dc:date>
+                    <dc:description>29 juillet 1882</dc:description>
+                    <dc:description>1882/07/29.</dc:description>
+                    <dc:description/>
+                    <dc:description>Appartient à l’ensemble documentaire : Aquit1</dc:description>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k9734119</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>[s.n.] (Agen)</dc:publisher>
+                    <dc:rights>domaine public</dc:rights>
+                    <dc:rights>public domain</dc:rights>
+                    <dc:source>Bibliothèque nationale de France, département Droit, économie, politique, JO-5640</dc:source>
+                    <dc:title>La Constitution. Supplément illustré</dc:title>
+                    <dc:type>texte</dc:type>
+                    <dc:type>text</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>2</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k9734119.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/bpt6k9734119</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k9734119.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k9734119.medres</medres>
+                <nqamoyen>88.26</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k9734119.thumbnail</thumbnail>
+                <typedoc>fascicules</typedoc>
+                <uri>bpt6k9734119</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:creator>Société de géographie commerciale (Bordeaux). Auteur du texte</dc:creator>
+                    <dc:creator>Groupe géographique et ethnographique du Sud-Ouest. Auteur du texte</dc:creator>
+                    <dc:creator>Association française pour l'avancement des sciences. Groupe régional (Gironde). Auteur du texte</dc:creator>
+                    <dc:date>1883</dc:date>
+                    <dc:description> 1883</dc:description>
+                    <dc:description>1883 (SER2,A6).</dc:description>
+                    <dc:description/>
+                    <dc:description>Appartient à l’ensemble documentaire : Aquit1</dc:description>
+                    <dc:format>Nombre total de vues : 43158</dc:format>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k1046831</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>[s.n.] (Bordeaux)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb328696274</dc:relation>
+                    <dc:relation>https://gallica.bnf.fr/ark:/12148/cb328696274/date</dc:relation>
+                    <dc:rights>domaine public</dc:rights>
+                    <dc:rights>public domain</dc:rights>
+                    <dc:source>Bibliothèque nationale de France, département Philosophie, histoire, sciences de l'homme, 8-G-299</dc:source>
+                    <dc:title>Bulletin / Société de géographie commerciale de Bordeaux</dc:title>
+                    <dc:type>texte</dc:type>
+                    <dc:type>text</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>3</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k1046831.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/bpt6k1046831</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k1046831.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k1046831.medres</medres>
+                <nqamoyen>0.0</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k1046831.thumbnail</thumbnail>
+                <typedoc>fascicules</typedoc>
+                <uri>bpt6k1046831</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1892</dc:date>
+                    <dc:description> 1892</dc:description>
+                    <dc:description>1892 (N3).</dc:description>
+                    <dc:description/>
+                    <dc:description>Appartient à l’ensemble documentaire : NordPdeC1</dc:description>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k969388g</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>[s.n.] (Boulogne-sur-Mer)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb32896241g</dc:relation>
+                    <dc:relation>https://gallica.bnf.fr/ark:/12148/cb32896241g/date</dc:relation>
+                    <dc:rights>domaine public</dc:rights>
+                    <dc:rights>public domain</dc:rights>
+                    <dc:source>Bibliothèque nationale de France, département Droit, économie, politique, JO-85351 (BIS)</dc:source>
+                    <dc:title>L'Indépendant de Boulogne-sur-Mer. Supplément illustré</dc:title>
+                    <dc:type>texte</dc:type>
+                    <dc:type>text</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>4</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/bpt6k969388g</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.medres</medres>
+                <nqamoyen>86.07</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.thumbnail</thumbnail>
+                <typedoc>fascicules</typedoc>
+                <uri>bpt6k969388g</uri>
+            </srw:extraRecordData>
+        </srw:record>
+        <srw:record>
+            <srw:recordSchema>http://www.openarchives.org/OAI/2.0/OAIdc.xsd</srw:recordSchema>
+            <srw:recordPacking>xml</srw:recordPacking>
+            <srw:recordData>
+                <oai_dc:dc>
+                    <dc:date>1892</dc:date>
+                    <dc:description> 1892</dc:description>
+                    <dc:description>1892 (N3).</dc:description>
+                    <dc:description/>
+                    <dc:description>Appartient à l’ensemble documentaire : NordPdeC1</dc:description>
+                    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k969388g</dc:identifier>
+                    <dc:language>fre</dc:language>
+                    <dc:publisher>[s.n.] (Boulogne-sur-Mer)</dc:publisher>
+                    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb32896241g</dc:relation>
+                    <dc:relation>https://gallica.bnf.fr/ark:/12148/cb32896241g/date</dc:relation>
+                    <dc:rights>domaine public</dc:rights>
+                    <dc:rights>public domain</dc:rights>
+                    <dc:source>Bibliothèque nationale de France, département Droit, économie, politique, JO-85351 (BIS)</dc:source>
+                    <dc:title>L'Indépendant de Boulogne-sur-Mer. Supplément illustré</dc:title>
+                    <dc:type>texte</dc:type>
+                    <dc:type>text</dc:type>
+                    <dc:type>publication en série imprimée</dc:type>
+                    <dc:type>printed serial</dc:type>
+                </oai_dc:dc>
+            </srw:recordData>
+            <srw:recordIdentifier>ark</srw:recordIdentifier>
+            <srw:recordPosition>4</srw:recordPosition>
+            <srw:extraRecordData>
+                <epubFile></epubFile>
+                <highres>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.highres</highres>
+                <infoSupModifiable></infoSupModifiable>
+                <link>https://gallica.bnf.fr/ark:/12148/bpt6k969388g</link>
+                <lowres>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.lowres</lowres>
+                <medres>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.medres</medres>
+                <nqamoyen>86.07</nqamoyen>
+                <provenance>Gallica</provenance>
+                <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k969388g.thumbnail</thumbnail>
+                <typedoc>fascicules</typedoc>
+                <uri>bpt6k969388g</uri>
+            </srw:extraRecordData>
+        </srw:record>
+    </srw:records>
+    <srw:nextRecordPosition>6</srw:nextRecordPosition>
+</srw:searchRetrieveResponse>
