@@ -1,15 +1,10 @@
-import asyncio
 from collections import Counter
-import json
 import os
 import aiohttp.client_exceptions
 import uvicorn
-import random
 from typing import List, Literal, Optional
 from pydantic import BaseModel
 from gallicaGetter.mostFrequent import get_gallica_core
-from gallicaGetter.volumeOccurrence import VolumeOccurrence
-from gallicaGetter.pagination import Pagination
 from gallicaGetter.pageText import PageQuery, PageText
 from gallicaContextSearch import (
     GallicaRecordWithHTML,
@@ -20,10 +15,6 @@ from gallicaContextSearch import (
     get_html_context,
     make_date_from_year_mon_day,
 )
-from www.database.connContext import build_db_conn, build_redis_conn
-from www.database.graphDataResolver import build_highcharts_series
-from www.request import Request
-from www.models import Ticket, Progress
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
