@@ -21,7 +21,8 @@ Run the FastAPI app locally:
 ```
 python -m uvicorn main:app --reload
 ```
-Tests:
+
+## Test
 
 An end-end test suite calls each endpoint and verifies the result. 
 
