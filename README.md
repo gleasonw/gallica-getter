@@ -1,7 +1,7 @@
 # gallica-getter
 JSON API proxy for the French National Archive. Find documents where a word occurs, context for the occurrence, full text for OCR document pages. Python class represents each Gallica endpoint.
 
-I hope to make this API easy to setup and deploy anywhere. 
+This API should be deployable anywhere. 
 
 Install the dependencies:
 
