@@ -5,7 +5,7 @@ This API should be deployable anywhere.
 
 ## Setup
 
-Set up the venv in the cloned directory:
+Build your Python venv in the cloned gallica-getter directory:
 ```
 virtualenv venv
 ```
