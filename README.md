@@ -12,7 +12,7 @@ Activate the venv:
 ```
 source venv/bin/activate
 ```
-Install the project dependencies from the requirements folder:
+Install the project dependencies from the requirements file:
 ```
 python -m pip install -r requirements.txt
 ```
