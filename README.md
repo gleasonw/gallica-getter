@@ -7,7 +7,11 @@ Install the dependencies:
 
 Set up the venv in the cloned directory:
 ```
-virtualenv venv && source venv/bin/activate
+virtualenv venv
+```
+Activate the venv:
+```
+source venv/bin/activate
 ```
 Install the project dependencies from the requirements folder:
 ```
