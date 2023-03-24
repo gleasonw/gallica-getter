@@ -3,7 +3,7 @@ JSON API proxy for the French National Archive. Find documents where a word occu
 
 This API should be deployable anywhere. 
 
-Install the dependencies:
+## Setup
 
 Set up the venv in the cloned directory:
 ```
