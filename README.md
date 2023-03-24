@@ -13,7 +13,7 @@ Install the project dependencies from the requirements folder:
 ```
 python3.11 -m pip install -r requirements.txt
 ```
-Run the FastAPI app:
+Run the FastAPI app locally:
 ```
 python3.11 -m uvicorn main:app --reload
 ```
