@@ -23,7 +23,7 @@ python -m uvicorn main:app --reload
 
 ## Test
 
-An end-end test suite calls each endpoint and verifies the result. 
+An end-end test suite calls each Gallica wrapper endpoint and verifies the result. 
 
 ```
 python -m pytest gallicaGetter/tests/test_gallicaWrapper.py
