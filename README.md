@@ -24,3 +24,4 @@ An end-end test suite calls each endpoint and verifies the result.
 ```
 python3.11 -m pytest gallicaGetter/tests/test_gallicaWrapper.py
 ```
+
