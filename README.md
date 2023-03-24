@@ -18,7 +18,7 @@ python -m pip install -r requirements.txt
 ```
 Run the FastAPI app locally:
 ```
-python -m uvicorn main:app --reload
+python -m uvicorn api:app --reload
 ```
 
 ## Test
