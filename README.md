@@ -1,5 +1,5 @@
 # gallica-getter
-Find documents where a word occurs, context for the occurrence, full text for OCR document pages. Compose Gallica services together using Python classes that represent each service.
+Find documents where a word occurs, context for the occurrence, full text for OCR document pages. Compose Gallica services using Python classes that represent each service.
 
 Alongside asynchronous Gallica wrappers, this project contains a JSON API for basic functions. Deploy this API anywhere. Railway, Google App Engine, AWS, Fly.io, a Raspberry PI. 
 ## Setup
