@@ -20,7 +20,10 @@ Run the FastAPI app locally:
 ```
 python -m uvicorn api:app --reload
 ```
-The server should be running at port 8000. Try a request: htttp://localhost:8000/api/gallicaRecords?terms=portland&source=periodical&link_term=oregon&link_distance=20
+The server should be running at port 8000. Try a request: 
+```
+htttp://localhost:8000/api/gallicaRecords?terms=portland&source=periodical&link_term=oregon&link_distance=20
+```
 
 ## Test
 
