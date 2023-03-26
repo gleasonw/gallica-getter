@@ -41,9 +41,6 @@ class Papers(GallicaWrapper):
     def post_init(self):
         self.issues_API = Issues()
 
-    def get_endpoint_url(self):
-        return "https://gallica.bnf.fr/SRU"
-
     async def get(
         self,
         arg_codes: Optional[List[str]] = None,
