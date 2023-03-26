@@ -1,7 +1,7 @@
 # gallica-getter
 Find documents where a word occurs, context for the occurrence, full text for OCR document pages. Python class represents each Gallica endpoint.
 
-Deploy this API anywhere. Railway, Google App Engine, AWS, a Raspberry PI. 
+Deploy this API anywhere. Railway, Google App Engine, AWS, Fly.io, a Raspberry PI. 
 ## Setup
 
 Build your Python venv in the cloned gallica-getter directory:
