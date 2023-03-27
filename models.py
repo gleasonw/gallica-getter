@@ -9,7 +9,6 @@ class ContextRow(BaseModel):
     left_context: str
     right_context: str
     page_url: str
-    page: str
 
 
 class GallicaRecordBase(BaseModel):
@@ -28,7 +27,7 @@ class GallicaRecordWithRows(GallicaRecordBase):
 
 
 class GallicaRecordWithHTML(GallicaRecordBase):
-    context: HTMLContext
+    context: List[str]
 
 
 class GallicaRecordWithPages(GallicaRecordBase):

@@ -76,7 +76,7 @@ class Papers(GallicaWrapper):
 
     def parse(self, gallica_responses):
         for response in gallica_responses:
-            for record in get_records_from_xml(response.xml):
+            for record in get_records_from_xml(response.text):
                 yield PaperRecord(
                     code=get_paper_code_from_record_xml(record),
                     title=get_paper_title_from_record_xml(record),

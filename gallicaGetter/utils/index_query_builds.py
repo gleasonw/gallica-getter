@@ -33,7 +33,7 @@ async def get_num_results_for_queries(
     for response in responses:
         assert response.query is type(VolumeQuery) or type(PaperQuery)
         response.query.gallica_results_for_params = get_num_records_from_gallica_xml(
-            response.xml
+            response.text
         )
         queries_with_num_results_state.append(response.query)
     return queries_with_num_results_state

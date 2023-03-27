@@ -19,7 +19,7 @@ class Issues(GallicaWrapper):
 
     def parse(self, gallica_responses):
         for response in gallica_responses:
-            years = get_years_published(response.xml)
+            years = get_years_published(response.text)
             code = response.query.code
             yield IssueYearRecord(code=code, years=years)
 

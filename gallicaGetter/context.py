@@ -29,7 +29,7 @@ class Context(GallicaWrapper):
 
     def parse(self, gallica_responses):
         for response in gallica_responses:
-            num_results_and_pages = get_num_results_and_pages_for_context(response.xml)
+            num_results_and_pages = get_num_results_and_pages_for_context(response.text)
             yield HTMLContext(
                 num_results=num_results_and_pages[0],
                 pages=[

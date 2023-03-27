@@ -7,7 +7,7 @@ import aiohttp
 
 @dataclass
 class Response:
-    xml: bytes
+    text: bytes
     query: Any
     elapsed_time: float
 
@@ -18,7 +18,7 @@ async def fetch_queries_concurrently(
     semaphore: asyncio.Semaphore | None = None,
     on_receive_response: Callable[[Response], None] | None = None,
 ) -> List[Response]:
-    """The core abstraction for fetching record xml from Gallica and parsing it to Python objects. Called by all subclasses."""
+    """The core abstraction for fetching data from Gallica concurrently. All requests pass through this function."""
 
     if session is None:
         async with aiohttp.ClientSession() as session:
@@ -77,7 +77,7 @@ async def get(
                 num_retries=num_retries + 1,
             )
         response = Response(
-            xml=await response.content.read(),
+            text=await response.content.read(),
             query=query,
             elapsed_time=elapsed_time,
         )

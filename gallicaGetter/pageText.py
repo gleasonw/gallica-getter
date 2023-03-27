@@ -39,7 +39,7 @@ class PageText(GallicaWrapper):
         for response in gallica_responses:
             try:
                 elements = etree.fromstring(
-                    response.xml, parser=etree.XMLParser(encoding="utf-8")
+                    response.text, parser=etree.XMLParser(encoding="utf-8")
                 )
             except etree.XMLSyntaxError:
                 continue

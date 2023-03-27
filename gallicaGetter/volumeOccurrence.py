@@ -50,10 +50,10 @@ class VolumeOccurrence(GallicaWrapper):
         gallica_responses: List[Response],
     ):
         for response in gallica_responses:
-            for i, record in enumerate(get_records_from_xml(response.xml)):
+            for i, record in enumerate(get_records_from_xml(response.text)):
                 if self.on_get_total_records and i == 0:
                     self.on_get_total_records(
-                        get_num_records_from_gallica_xml(response.xml)
+                        get_num_records_from_gallica_xml(response.text)
                     )
                 assert isinstance(response.query, VolumeQuery)
                 yield VolumeRecord(

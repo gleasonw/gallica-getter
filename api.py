@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import uvicorn
 from typing import Callable, List, Literal, Optional, Tuple
 from gallicaGetter.context import Context, HTMLContext
+from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.mostFrequent import get_gallica_core
 from gallicaGetter.pageText import PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query
@@ -13,7 +14,15 @@ from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
 
-from models import ContextRow, ContextSearchArgs, GallicaRecordWithHTML, GallicaRecordWithPages, GallicaRecordWithRows, MostFrequentRecord, UserResponse
+from models import (
+    ContextRow,
+    ContextSearchArgs,
+    GallicaRecordWithHTML,
+    GallicaRecordWithPages,
+    GallicaRecordWithRows,
+    MostFrequentRecord,
+    UserResponse,
+)
 
 app = FastAPI()
 
@@ -161,8 +170,6 @@ async def fetch_records_from_gallica(
                 records = await get_occurrences_use_ContentSearch(
                     **props, parser=build_row_record
                 )
-            elif include_page_text:
-                records = await get_occurrences_use_RequestDigitalElement(**props)
             else:
                 records = await get_occurrences_use_ContentSearch(
                     **props, parser=build_html_record
@@ -176,27 +183,31 @@ async def fetch_records_from_gallica(
             raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
-def build_html_record(record: VolumeRecord, context: HTMLContext):
+def build_html_record(record: VolumeRecord, context: ExtractRoot):
+    snippets = context.fragment.contenu[:-1]
     return GallicaRecordWithHTML(
         paper_title=record.paper_title,
         paper_code=record.paper_code,
         terms=record.terms,
         date=str(record.date),
         url=record.url,
-        context=context,
+        context=[snippet.value.contenu for snippet in snippets],
         ark=record.ark,
         author=record.author,
         ocr_quality=record.ocr_quality,
     )
 
 
-def build_row_record(record: VolumeRecord, context: HTMLContext):
+def build_row_record(record: VolumeRecord, context: ExtractRoot):
     """Split the Gallica HTML context on the highlighted spans, creating rows of pivot (span), left context, and right context."""
     rows: List[ContextRow] = []
+    # last element is a label, not a context extract
+    snippets = context.fragment.contenu[:-1]
 
-    for page in context.pages:
-        soup = BeautifulSoup(page.context, "html.parser")
-        spans = soup.find_all("span", {"class": "highlight"})
+    for snippet in snippets:
+        text = snippet.value.contenu
+        soup = BeautifulSoup(text, "html.parser")
+        spans = soup.find_all("mark")
 
         def stringify_and_split(span: BeautifulSoup):
             text = str(span).strip()
@@ -247,8 +258,7 @@ def build_row_record(record: VolumeRecord, context: HTMLContext):
                     pivot=pivot,
                     left_context=closest_left_text,
                     right_context=closest_right_text,
-                    page_url=f"{record.url}/f{page.page_num}.image.r={pivot}",
-                    page=page.page_num,
+                    page_url=snippet.value.url,
                 )
             )
 
@@ -270,7 +280,7 @@ async def get_occurrences_and_context(
     on_get_total_records: Callable[[int], None],
     on_get_origin_urls: Callable[[List[str]], None],
     session: aiohttp.ClientSession,
-) -> Tuple[List[VolumeRecord], List[HTMLContext]]:
+) -> Tuple[List[VolumeRecord], List[ExtractRoot]]:
     """Queries Gallica's SRU and ContentSearch API's to get metadata and context for a given term in the archive."""
 
     link = None
@@ -297,9 +307,9 @@ async def get_occurrences_and_context(
     gallica_records = list(gallica_records)
 
     # get the context for those volumes
-    content_wrapper = Context()
+    content_wrapper = ContextSnippets()
     context = await content_wrapper.get(
-        [(record.ark, record.terms) for record in gallica_records],
+        [(record.ark, record.terms[0]) for record in gallica_records],
         session=session,
     )
     return gallica_records, list(context)
@@ -329,70 +339,70 @@ async def get_occurrences_use_ContentSearch(
     return records_with_context
 
 
-async def get_occurrences_use_RequestDigitalElement(
-    args: ContextSearchArgs,
-    on_get_total_records: Callable[[int], None],
-    on_get_origin_urls: Callable[[List[str]], None],
-    session: aiohttp.ClientSession,
-) -> List[GallicaRecordWithPages]:
-    """Queries Gallica's SRU, ContentSearch, and RequestDigitalElement API's to get metadata and page text for term occurrences."""
+# async def get_occurrences_use_RequestDigitalElement(
+#     args: ContextSearchArgs,
+#     on_get_total_records: Callable[[int], None],
+#     on_get_origin_urls: Callable[[List[str]], None],
+#     session: aiohttp.ClientSession,
+# ) -> List[GallicaRecordWithPages]:
+#     """Queries Gallica's SRU, ContentSearch, and RequestDigitalElement API's to get metadata and page text for term occurrences."""
 
-    documents, context = await get_occurrences_and_context(
-        args=args,
-        on_get_total_records=on_get_total_records,
-        on_get_origin_urls=on_get_origin_urls,
-        session=session,
-    )
+#     documents, context = await get_occurrences_and_context(
+#         args=args,
+#         on_get_total_records=on_get_total_records,
+#         on_get_origin_urls=on_get_origin_urls,
+#         session=session,
+#     )
 
-    # context will be filled with page text for each occurrence
-    keyed_documents = {
-        record.ark: GallicaRecordWithPages(
-            paper_title=record.paper_title,
-            paper_code=record.paper_code,
-            terms=record.terms,
-            date=str(record.date),
-            url=record.url,
-            ark=record.ark,
-            author=record.author,
-            ocr_quality=record.ocr_quality,
-            context=[],
-        )
-        for record in documents
-    }
+#     # context will be filled with page text for each occurrence
+#     keyed_documents = {
+#         record.ark: GallicaRecordWithPages(
+#             paper_title=record.paper_title,
+#             paper_code=record.paper_code,
+#             terms=record.terms,
+#             date=str(record.date),
+#             url=record.url,
+#             ark=record.ark,
+#             author=record.author,
+#             ocr_quality=record.ocr_quality,
+#             context=[],
+#         )
+#         for record in documents
+#     }
 
-    # semaphore limits the number of concurrent page requests
-    sem = asyncio.Semaphore(10)
-    page_text_wrapper = PageText()
+#     # semaphore limits the number of concurrent page requests
+#     sem = asyncio.Semaphore(10)
+#     page_text_wrapper = PageText()
 
-    queries: List[PageQuery] = []
-    for document_context in context:
-        record = keyed_documents[document_context.ark]
-        for page in document_context.pages:
-            queries.append(
-                PageQuery(
-                    ark=record.ark,
-                    page_num=int(page.page_num),
-                )
-            )
+#     queries: List[PageQuery] = []
+#     for document_context in context:
+#         record = keyed_documents[document_context.ark]
+#         for snippet in document_context.fragment.contenu:
+#             queries.append(
+#                 PageQuery(
+#                     ark=record.ark,
+#                     page_num=int(page.page_num),
+#                 )
+#             )
 
-    # fetch the page text for each occurrence
-    page_data = await page_text_wrapper.get(
-        page_queries=queries,
-        session=session,
-        semaphore=sem,
-    )
-    for occurrence_page in page_data:
-        record = keyed_documents[occurrence_page.ark]
-        terms_string = " ".join(record.terms)
-        record.context.append(
-            {
-                "page_num": occurrence_page.page_num,
-                "text": occurrence_page.text,
-                "page_url": f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
-            }
-        )
+#     # fetch the page text for each occurrence
+#     page_data = await page_text_wrapper.get(
+#         page_queries=queries,
+#         session=session,
+#         semaphore=sem,
+#     )
+#     for occurrence_page in page_data:
+#         record = keyed_documents[occurrence_page.ark]
+#         terms_string = " ".join(record.terms)
+#         record.context.append(
+#             {
+#                 "page_num": occurrence_page.page_num,
+#                 "text": occurrence_page.text,
+#                 "page_url": f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
+#             }
+#         )
 
-    return list(keyed_documents.values())
+#     return list(keyed_documents.values())
 
 
 def make_date_from_year_mon_day(

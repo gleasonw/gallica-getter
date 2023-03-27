@@ -56,7 +56,7 @@ class PeriodOccurrence(GallicaWrapper):
 
     def parse(self, gallica_responses):
         for response in gallica_responses:
-            count = get_num_records_from_gallica_xml(response.xml)
+            count = get_num_records_from_gallica_xml(response.text)
             query = response.query
             yield PeriodRecord(
                 _date=Date(query.start_date),

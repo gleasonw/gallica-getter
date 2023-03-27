@@ -40,7 +40,7 @@ class Pagination(GallicaWrapper):
         response = gallica_responses[0]
         try:
             elements = etree.fromstring(
-                response.xml, parser=etree.XMLParser(encoding="utf-8")
+                response.text, parser=etree.XMLParser(encoding="utf-8")
             )
         except etree.XMLSyntaxError:
             return []

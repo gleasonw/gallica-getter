@@ -29,7 +29,7 @@ class FullText(GallicaWrapper):
     """Wraps Gallica's full text API. Can be an expensive fetch, and is rate-limited."""
 
     def parse(self, gallica_responses):
-        return (ParsedGallicaHTML(response.xml) for response in gallica_responses)
+        return (ParsedGallicaHTML(response.text) for response in gallica_responses)
 
     async def get(self, ark_codes) -> Generator[ParsedGallicaHTML, None, None]:
         if type(ark_codes) is not list:
