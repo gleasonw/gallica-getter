@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Generator, List
 
 from bs4 import BeautifulSoup
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.queries import FullTextQuery
 from gallicaGetter.gallicaWrapper import GallicaWrapper
 
@@ -34,4 +35,4 @@ class FullText(GallicaWrapper):
         if type(ark_codes) is not list:
             ark_codes = [ark_codes]
         queries = [FullTextQuery(ark=code) for code in ark_codes]
-        return await self.get_records_for_queries(queries=queries)
+        return self.parse(await fetch_queries_concurrently(queries=queries))

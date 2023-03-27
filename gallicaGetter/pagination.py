@@ -1,6 +1,7 @@
 import asyncio
-from typing import Generator, List, Literal
+from typing import Generator, List
 import aiohttp
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.gallicaWrapper import GallicaWrapper, Response
 from pydantic import BaseModel
 from lxml import etree
@@ -62,8 +63,10 @@ class Pagination(GallicaWrapper):
         semaphore: asyncio.Semaphore | None = None,
     ) -> Generator[PaginationData, None, None]:
         query = PaginationQuery(ark=ark)
-        return await self.get_records_for_queries(
-            queries=[query],
-            session=session,
-            semaphore=semaphore,
+        return self.parse(
+            await fetch_queries_concurrently(
+                queries=[query],
+                session=session,
+                semaphore=semaphore,
+            )
         )

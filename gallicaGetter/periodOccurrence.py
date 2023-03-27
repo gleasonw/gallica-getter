@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import aiohttp
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.utils.date import Date
 from gallicaGetter.utils.parse_xml import get_num_records_from_gallica_xml
 from gallicaGetter.gallicaWrapper import GallicaWrapper
@@ -47,8 +48,10 @@ class PeriodOccurrence(GallicaWrapper):
             codes=codes,
             grouping=grouping,
         )
-        return await self.get_records_for_queries(
-            queries=queries, on_receive_response=onProgressUpdate, session=session
+        return self.parse(
+            await fetch_queries_concurrently(
+                queries=queries, on_receive_response=onProgressUpdate, session=session
+            )
         )
 
     def parse(self, gallica_responses):

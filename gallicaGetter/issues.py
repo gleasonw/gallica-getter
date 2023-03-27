@@ -1,6 +1,7 @@
 from typing import Generator, List
 
 import aiohttp
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.queries import IssuesQuery
 from gallicaGetter.utils.parse_xml import get_years_published
 from gallicaGetter.gallicaWrapper import GallicaWrapper
@@ -28,4 +29,4 @@ class Issues(GallicaWrapper):
         if type(codes) == str:
             codes = [codes]
         queries = [IssuesQuery(code=code) for code in codes]
-        return await self.get_records_for_queries(queries, session=session)
+        return self.parse(await fetch_queries_concurrently(queries, session=session))

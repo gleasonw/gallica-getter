@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import aiohttp
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.issues import Issues
 from gallicaGetter.utils.parse_xml import (
     get_paper_code_from_record_xml,
@@ -62,7 +63,9 @@ class Papers(GallicaWrapper):
             )
         else:
             queries = self.build_sru_queries_for_codes(arg_codes)
-        record_generator = await self.get_records_for_queries(queries, session=session)
+        record_generator = self.parse(
+            await fetch_queries_concurrently(queries, session=session)
+        )
         sru_paper_records = list(record_generator)
         paper_codes = [record.code for record in sru_paper_records]
         year_records = await self.issues_API.get(paper_codes, session=session)

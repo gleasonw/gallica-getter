@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import urllib.parse
 
 import aiohttp
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.queries import VolumeQuery
 
 from gallicaGetter.utils.base_query_builds import build_base_queries
@@ -127,9 +128,11 @@ class VolumeOccurrence(GallicaWrapper):
             on_get_origin_urls(
                 [url + urllib.parse.urlencode(query.params) for query in queries]
             )
-        return await self.get_records_for_queries(
-            queries=queries,
-            on_receive_response=on_receive_response,
-            session=session,
-            semaphore=semaphore,
+        return self.parse(
+            await fetch_queries_concurrently(
+                queries=queries,
+                on_receive_response=on_receive_response,
+                session=session,
+                semaphore=semaphore,
+            )
         )

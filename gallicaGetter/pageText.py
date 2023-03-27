@@ -1,6 +1,7 @@
 import asyncio
 from typing import Generator, List, Literal
 import aiohttp
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.gallicaWrapper import GallicaWrapper, Response
 from pydantic import BaseModel
 from lxml import etree
@@ -84,8 +85,10 @@ class PageText(GallicaWrapper):
         session: aiohttp.ClientSession | None = None,
         semaphore: asyncio.Semaphore | None = None,
     ) -> Generator[ConvertedXMLPage, None, None]:
-        return await self.get_records_for_queries(
-            queries=page_queries,
-            session=session,
-            semaphore=semaphore,
+        return self.parse(
+            await fetch_queries_concurrently(
+                queries=page_queries,
+                session=session,
+                semaphore=semaphore,
+            )
         )
