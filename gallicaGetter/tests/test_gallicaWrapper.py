@@ -46,6 +46,7 @@ async def test_get_page():
             },
             1,
         ),
+        ({"terms": ["vote des femmes"], "start_date": "1848", "end_date": "1848"}, 1),
     ],
 )
 async def test_get_volume_occurrences(input, expected_length):

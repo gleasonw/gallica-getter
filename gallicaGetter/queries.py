@@ -62,7 +62,7 @@ class VolumeQuery(BaseModel):
         return cql
 
     def build_date_cql(self):
-        if self.start_date and self.end_date:
+        if self.start_date and self.end_date and self.start_date != self.end_date:
             return f'gallicapublication_date>="{self.start_date}" and gallicapublication_date<"{self.end_date}"'
         elif self.start_date:
             return f'gallicapublication_date="{self.start_date}"'

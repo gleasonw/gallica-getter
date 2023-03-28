@@ -53,6 +53,8 @@ async def get(
     on_receive_response: Callable[[Response], None] | None = None,
     num_retries=0,
 ) -> Response:
+    if num_retries > 3:
+        raise aiohttp.ClientConnectionError("too many retries")
     if semaphore:
         async with semaphore:
             return await get(

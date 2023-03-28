@@ -8,7 +8,7 @@ class ContextRow(BaseModel):
     pivot: str
     left_context: str
     right_context: str
-    page_url: str
+    page_url: Optional[str | None] = None
 
 
 class GallicaRecordBase(BaseModel):
@@ -22,22 +22,20 @@ class GallicaRecordBase(BaseModel):
     ocr_quality: float
 
 
-class GallicaRecordWithRows(GallicaRecordBase):
+class GallicaRowContext(GallicaRecordBase):
     context: List[ContextRow]
 
 
-class GallicaRecordWithHTML(GallicaRecordBase):
+class GallicaPageContext(GallicaRecordBase):
     context: List[str]
 
 
-class GallicaRecordWithPages(GallicaRecordBase):
+class GallicaRecordFullPageText(GallicaRecordBase):
     context: List[Dict[str, str | int]]
 
 
 class UserResponse(BaseModel):
-    records: List[GallicaRecordWithRows] | List[GallicaRecordWithHTML] | List[
-        GallicaRecordWithPages
-    ]
+    records: List[GallicaRowContext] | List[GallicaPageContext] | List[GallicaRecordFullPageText]
     num_results: int
     origin_urls: List[str]
 

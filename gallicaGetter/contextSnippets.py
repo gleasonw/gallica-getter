@@ -29,6 +29,12 @@ class Snippet(BaseModel):
     contenu: str
     url: str
 
+    @property
+    def page_num(self):
+        f_item = self.url.split("/")[-1].split(".")[0]
+        if type(f_item[1:]) == int:
+            return int(f_item[1:])
+
 
 class Result(BaseModel):
     value: Snippet

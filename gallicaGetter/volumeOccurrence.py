@@ -41,6 +41,18 @@ class VolumeRecord:
     def ark(self) -> str:
         return self.url.split("/")[-1]
 
+    def dict(self):
+        return {
+            "paper_title": self.paper_title,
+            "paper_code": self.paper_code,
+            "ocr_quality": self.ocr_quality,
+            "author": self.author,
+            "url": self.url,
+            "date": str(self.date),
+            "terms": self.terms,
+            "ark": self.ark,
+        }
+
 
 class VolumeOccurrence(GallicaWrapper):
     """Fetches occurrence metadata from Gallica's SRU API. There may be many occurrences in one Gallica record."""
