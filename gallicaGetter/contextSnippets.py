@@ -39,6 +39,15 @@ class Snippet(BaseModel):
 class Result(BaseModel):
     value: Snippet
 
+    @property
+    def context(self):
+        """Small abstraction to obscure the details of the JSON structure from downstream."""
+        return self.value.contenu
+
+    @property
+    def page_num(self):
+        return self.value.page_num
+
 
 class Fragment(BaseModel):
     contenu: List[Result]
@@ -47,6 +56,11 @@ class Fragment(BaseModel):
 class ExtractRoot(BaseModel):
     fragment: Fragment
     ark: str
+
+    @property
+    def pages(self):
+        """Small abstraction to obscure the details of the JSON structure from downstream."""
+        return self.fragment.contenu
 
 
 class ContextSnippets(GallicaWrapper):
