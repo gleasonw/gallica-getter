@@ -160,6 +160,9 @@ async def fetch_records_from_gallica(
                 nonlocal origin_urls
                 origin_urls = urls
 
+            # build a semaphore to limit the number of concurrent requests to Gallica, this will be passed around as props
+            sem = asyncio.Semaphore(10)
+
             keyed_docs = {
                 record.ark: record
                 for record in await get_documents_with_occurrences(
@@ -167,60 +170,42 @@ async def fetch_records_from_gallica(
                     on_get_total_records=set_total_records,
                     on_get_origin_urls=set_origin_urls,
                     session=session,
+                    semaphore=sem,
                 )
             }
+
             props = {
-                "args": args,
                 "session": session,
                 "keyed_docs": keyed_docs,
+                "sem": sem,
             }
+
             if include_page_text and all_context:
-                return UserResponse(
-                    records=await get_all_occurrences_full_page_text(**props),
-                    num_results=total_records,
-                    origin_urls=origin_urls,
-                )
-            if include_page_text:
-                return UserResponse(
-                    records=await get_sample_occurrences_full_page_text(**props),
-                    num_results=total_records,
-                    origin_urls=origin_urls,
-                )
-            if row_split and all_context:
-                return UserResponse(
-                    records=[
-                        record
-                        async for record in get_all_occurrences_row_divide(**props)
-                    ],
-                    num_results=total_records,
-                    origin_urls=origin_urls,
-                )
-            if row_split:
-                return UserResponse(
-                    records=[
-                        record
-                        async for record in get_sample_occurrences_row_divide(**props)
-                    ],
-                    num_results=total_records,
-                    origin_urls=origin_urls,
-                )
-            if all_context:
-                return UserResponse(
-                    records=[
-                        record
-                        async for record in get_all_occurrences_page_grouped(**props)
-                    ],
-                    num_results=total_records,
-                    origin_urls=origin_urls,
-                )
+                records = await get_all_context_full_page_text(**props)
+            elif include_page_text:
+                records = await get_sample_context_full_page_text(**props)
+            elif row_split and all_context:
+                records = [
+                    record async for record in get_all_context_row_divide(**props)
+                ]
+            elif row_split:
+                records = [
+                    record async for record in get_sample_context_row_divide(**props)
+                ]
+            elif all_context:
+                records = [
+                    record async for record in get_all_context_page_grouped(**props)
+                ]
+            else:
+                records = [
+                    record async for record in get_sample_context_page_grouped(**props)
+                ]
             return UserResponse(
-                records=[
-                    record
-                    async for record in get_sample_occurrences_page_grouped(**props)
-                ],
+                records=records,
                 num_results=total_records,
                 origin_urls=origin_urls,
             )
+
     except (
         aiohttp.client_exceptions.ClientConnectorError,
         aiohttp.client_exceptions.ClientConnectionError,
@@ -233,6 +218,7 @@ async def get_documents_with_occurrences(
     on_get_total_records: Callable[[int], None],
     on_get_origin_urls: Callable[[List[str]], None],
     session: aiohttp.ClientSession,
+    semaphore: asyncio.Semaphore,
 ) -> List[VolumeRecord]:
     """Queries Gallica's SRU and ContentSearch API's to get metadata and context for a given term in the archive."""
 
@@ -255,19 +241,22 @@ async def get_documents_with_occurrences(
         on_get_total_records=on_get_total_records,
         on_get_origin_urls=on_get_origin_urls,
         session=session,
+        semaphore=semaphore,
     )
 
     return list(gallica_records)
 
 
-async def get_all_occurrences_row_divide(
+async def get_all_context_row_divide(
     keyed_docs: Dict[str, VolumeRecord],
     session: aiohttp.ClientSession,
+    sem: asyncio.Semaphore,
 ):
     """Gets all occurrences of a term in a given time period, and returns a list of records for each occurrence."""
 
-    context = await get_all_context_in_documents(list(keyed_docs.values()), session)
-    for context_response in context:
+    for context_response in await get_all_context_in_documents(
+        records=list(keyed_docs.values()), session=session, semaphore=sem
+    ):
         record = keyed_docs[context_response.ark]
         page_rows = build_row_record_from_ContentSearch_response(
             record, context_response
@@ -275,41 +264,47 @@ async def get_all_occurrences_row_divide(
         yield GallicaRowContext(**record.dict(), context=[row for row in page_rows])
 
 
-async def get_sample_occurrences_row_divide(
+async def get_sample_context_row_divide(
     keyed_docs: Dict[str, VolumeRecord],
     session: aiohttp.ClientSession,
+    sem: asyncio.Semaphore,
 ):
     """Gets a sample of occurrences of a term in a given time period, and returns a list of records for each occurrence."""
 
-    context = await get_sample_context_in_documents(list(keyed_docs.values()), session)
-    for context_response in context:
+    for context_response in await get_sample_context_in_documents(
+        records=list(keyed_docs.values()), session=session, semaphore=sem
+    ):
         record = keyed_docs[context_response.ark]
         page_rows = build_row_record_from_extract(record, context_response)
         yield GallicaRowContext(**record.dict(), context=[row for row in page_rows])
 
 
-async def get_all_occurrences_page_grouped(
+async def get_all_context_page_grouped(
     keyed_docs: Dict[str, VolumeRecord],
     session: aiohttp.ClientSession,
+    sem: asyncio.Semaphore,
 ):
     """Gets all occurrences of a term in a given time period, and returns a list of records for each occurrence."""
 
-    context = await get_all_context_in_documents(list(keyed_docs.values()), session)
-    for context_response in context:
+    for context_response in await get_all_context_in_documents(
+        records=list(keyed_docs.values()), session=session, semaphore=sem
+    ):
         record = keyed_docs[context_response.ark]
         yield GallicaPageContext(
             **record.dict(), context=[page.context for page in context_response.pages]
         )
 
 
-async def get_sample_occurrences_page_grouped(
+async def get_sample_context_page_grouped(
     keyed_docs: Dict[str, VolumeRecord],
     session: aiohttp.ClientSession,
+    sem: asyncio.Semaphore,
 ):
     """Gets a sample of occurrences of a term in a given time period, and returns a list of records for each occurrence."""
 
-    context = await get_sample_context_in_documents(list(keyed_docs.values()), session)
-    for context_response in context:
+    for context_response in await get_sample_context_in_documents(
+        records=list(keyed_docs.values()), session=session, semaphore=sem
+    ):
         record = keyed_docs[context_response.ark]
         yield GallicaPageContext(
             **record.dict(),
@@ -317,7 +312,98 @@ async def get_sample_occurrences_page_grouped(
         )
 
 
+async def get_all_context_full_page_text(
+    keyed_docs: Dict[str, VolumeRecord],
+    session: aiohttp.ClientSession,
+    sem: asyncio.Semaphore,
+):
+    """Gets all occurrences of a term in a given time period, and returns a list of records for each occurrence."""
+
+    page_text_wrapper = PageText()
+    queries: List[PageQuery] = []
+
+    # build records to be filled with page text for each page w/occurrence
+    gallica_records: Dict[str, GallicaRecordFullPageText] = {
+        record.ark: GallicaRecordFullPageText(**record.dict(), context=[])
+        for record in keyed_docs.values()
+    }
+
+    for context_response in await get_all_context_in_documents(
+        records=list(keyed_docs.values()), session=session, semaphore=sem
+    ):
+        record = keyed_docs[context_response.ark]
+        for page in context_response.pages:
+            queries.append(
+                PageQuery(
+                    ark=record.ark,
+                    page_num=int(page.page_num),
+                )
+            )
+    page_data = await page_text_wrapper.get(
+        page_queries=queries, semaphore=sem, session=session
+    )
+    for occurrence_page in page_data:
+        record = gallica_records[occurrence_page.ark]
+        terms_string = " ".join(record.terms)
+
+        record.context.append(
+            {
+                "page_num": occurrence_page.page_num,
+                "text": occurrence_page.text,
+                "page_url": f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
+            }
+        )
+    return list(gallica_records.values())
+
+
+async def get_sample_context_full_page_text(
+    keyed_docs: Dict[str, VolumeRecord],
+    session: aiohttp.ClientSession,
+    sem: asyncio.Semaphore,
+):
+    """Gets a sample of occurrences of a term in a given time period, and returns a list of records for each occurrence."""
+
+    page_text_wrapper = PageText()
+    queries: List[PageQuery] = []
+
+    # build records to be filled with page text for each page w/occurrence
+    gallica_records: Dict[str, GallicaRecordFullPageText] = {
+        record.ark: GallicaRecordFullPageText(**record.dict(), context=[])
+        for record in keyed_docs.values()
+    }
+
+    for context_response in await get_sample_context_in_documents(
+        records=list(keyed_docs.values()), session=session, semaphore=sem
+    ):
+        record = keyed_docs[context_response.ark]
+        for result in context_response.fragment.contenu:
+            if type(result.value.page_num) is not int:
+                continue
+            queries.append(
+                PageQuery(
+                    ark=record.ark,
+                    page_num=result.value.page_num,
+                )
+            )
+    page_data = await page_text_wrapper.get(
+        page_queries=queries, semaphore=sem, session=session
+    )
+    for occurrence_page in page_data:
+        record = gallica_records[occurrence_page.ark]
+        terms_string = " ".join(record.terms)
+
+        record.context.append(
+            {
+                "page_num": occurrence_page.page_num,
+                "text": occurrence_page.text,
+                "page_url": f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
+            }
+        )
+    return list(gallica_records.values())
+
+
 def parse_spans_to_rows(spans: ResultSet[Any], record: VolumeRecord):
+    """Gallica returns a blob of context for each page, this function splits the blob into a row for each occurrence."""
     rows: List[ContextRow] = []
 
     def stringify_and_split(span: BeautifulSoup):
@@ -409,12 +495,15 @@ def build_row_record_from_extract(record: VolumeRecord, extract: ExtractRoot):
 async def get_all_context_in_documents(
     records: List[VolumeRecord],
     session: aiohttp.ClientSession,
+    semaphore: asyncio.Semaphore,
 ) -> List[HTMLContext]:
     """Queries Gallica's ContentSearch API's to get context for ALL occurrences within a list of documents."""
 
     context_wrapper = Context()
     context = await context_wrapper.get(
-        [(record.ark, record.terms) for record in records], session=session
+        [(record.ark, record.terms) for record in records],
+        session=session,
+        semaphore=semaphore,
     )
     return list(context)
 
@@ -422,8 +511,9 @@ async def get_all_context_in_documents(
 async def get_sample_context_in_documents(
     records: List[VolumeRecord],
     session: aiohttp.ClientSession,
+    semaphore: asyncio.Semaphore,
 ) -> List[ExtractRoot]:
-    """Queries Gallica's search result API to show a sample of context instead of the entire batch. Should improve response times."""
+    """Queries Gallica's search result API to show a sample of context instead of the entire batch."""
 
     # warn if terms length is greater than 1
     if any(len(record.terms) > 1 for record in records):
@@ -432,83 +522,11 @@ async def get_sample_context_in_documents(
         )
     context_snippet_wrapper = ContextSnippets()
     context = await context_snippet_wrapper.get(
-        [(record.ark, record.terms[0]) for record in records], session=session
+        [(record.ark, record.terms[0]) for record in records],
+        session=session,
+        semaphore=semaphore,
     )
     return list(context)
-
-
-# TODO: rewrite, bring all_context up
-async def get_occurrences_use_RequestDigitalElement(
-    args: ContextSearchArgs,
-    on_get_total_records: Callable[[int], None],
-    on_get_origin_urls: Callable[[List[str]], None],
-    session: aiohttp.ClientSession,
-    all_context: Optional[bool] = False,
-) -> List[GallicaRecordFullPageText]:
-    """Queries Gallica's SRU, ContentSearch, and RequestDigitalElement API's to get metadata and page text for term occurrences."""
-
-    documents = await get_documents_with_occurrences(
-        args=args,
-        on_get_total_records=on_get_total_records,
-        on_get_origin_urls=on_get_origin_urls,
-        session=session,
-    )
-
-    # context will be filled with page text for each occurrence
-    keyed_documents = {
-        record.ark: GallicaRecordFullPageText(
-            **record.dict(),
-            context=[],
-        )
-        for record in documents
-    }
-    # semaphore limits the number of concurrent page requests
-    sem = asyncio.Semaphore(11)
-    page_text_wrapper = PageText()
-    queries: List[PageQuery] = []
-
-    if all_context:
-        context = await get_all_context_in_documents(documents, session)
-        for document_context in context:
-            record = keyed_documents[document_context.ark]
-            for pages in document_context.pages:
-                queries.append(
-                    PageQuery(
-                        ark=record.ark,
-                        page_num=int(pages.page_num),
-                    )
-                )
-    else:
-        context = await get_sample_context_in_documents(documents, session)
-        for document_context in context:
-            record = keyed_documents[document_context.ark]
-            for snippet in document_context.fragment.contenu:
-                if snippet.value.page_num is not None:
-                    queries.append(
-                        PageQuery(
-                            ark=record.ark,
-                            page_num=snippet.value.page_num,
-                        )
-                    )
-
-    # fetch the page text for each occurrence
-    page_data = await page_text_wrapper.get(
-        page_queries=queries,
-        session=session,
-        semaphore=sem,
-    )
-    for occurrence_page in page_data:
-        record = keyed_documents[occurrence_page.ark]
-        terms_string = " ".join(record.terms)
-        record.context.append(
-            {
-                "page_num": occurrence_page.page_num,
-                "text": occurrence_page.text,
-                "page_url": f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
-            }
-        )
-
-    return list(keyed_documents.values())
 
 
 def make_date_from_year_mon_day(

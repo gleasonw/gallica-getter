@@ -32,7 +32,7 @@ class Snippet(BaseModel):
     @property
     def page_num(self):
         f_item = self.url.split("/")[-1].split(".")[0]
-        if type(f_item[1:]) == int:
+        if f_item[1:].isdigit():
             return int(f_item[1:])
 
 
