@@ -1,0 +1,2 @@
+runtime: python311
+entrypoint: python3 -m main

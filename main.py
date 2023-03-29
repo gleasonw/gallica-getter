@@ -4,7 +4,7 @@ import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
-from typing import Any, Callable, Generator, List, Literal, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, List, Literal, Optional, Tuple
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.mostFrequent import get_gallica_core
@@ -160,32 +160,64 @@ async def fetch_records_from_gallica(
                 nonlocal origin_urls
                 origin_urls = urls
 
+            keyed_docs = {
+                record.ark: record
+                for record in await get_documents_with_occurrences(
+                    args=args,
+                    on_get_total_records=set_total_records,
+                    on_get_origin_urls=set_origin_urls,
+                    session=session,
+                )
+            }
             props = {
                 "args": args,
                 "session": session,
-                "on_get_origin_urls": set_origin_urls,
-                "on_get_total_records": set_total_records,
-                "all_context": all_context,
+                "keyed_docs": keyed_docs,
             }
-            # TODO: rewrite.
+            if include_page_text and all_context:
+                return UserResponse(
+                    records=await get_all_occurrences_full_page_text(**props),
+                    num_results=total_records,
+                    origin_urls=origin_urls,
+                )
             if include_page_text:
-                records = await get_occurrences_use_RequestDigitalElement(**props)
-            else:
-                if row_split:
-                    if all_context:
-                        records = get_occurrences_use_ContentSearch(
-                            **props,
-                            row_parser=build_row_record_from_ContentSearch_response,
-                        )
-                    else:
-                        records = get_occurrences_use_ContentSearch(
-                            **props, row_parser=build_row_record_from_extract
-                        )
-                else:
-                    records = get_occurrences_use_ContentSearch(**props)
-                records = [record async for record in records]
+                return UserResponse(
+                    records=await get_sample_occurrences_full_page_text(**props),
+                    num_results=total_records,
+                    origin_urls=origin_urls,
+                )
+            if row_split and all_context:
+                return UserResponse(
+                    records=[
+                        record
+                        async for record in get_all_occurrences_row_divide(**props)
+                    ],
+                    num_results=total_records,
+                    origin_urls=origin_urls,
+                )
+            if row_split:
+                return UserResponse(
+                    records=[
+                        record
+                        async for record in get_sample_occurrences_row_divide(**props)
+                    ],
+                    num_results=total_records,
+                    origin_urls=origin_urls,
+                )
+            if all_context:
+                return UserResponse(
+                    records=[
+                        record
+                        async for record in get_all_occurrences_page_grouped(**props)
+                    ],
+                    num_results=total_records,
+                    origin_urls=origin_urls,
+                )
             return UserResponse(
-                records=records,
+                records=[
+                    record
+                    async for record in get_sample_occurrences_page_grouped(**props)
+                ],
                 num_results=total_records,
                 origin_urls=origin_urls,
             )
@@ -194,6 +226,95 @@ async def fetch_records_from_gallica(
         aiohttp.client_exceptions.ClientConnectionError,
     ):
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
+
+
+async def get_documents_with_occurrences(
+    args: ContextSearchArgs,
+    on_get_total_records: Callable[[int], None],
+    on_get_origin_urls: Callable[[List[str]], None],
+    session: aiohttp.ClientSession,
+) -> List[VolumeRecord]:
+    """Queries Gallica's SRU and ContentSearch API's to get metadata and context for a given term in the archive."""
+
+    link = None
+    if args.link_distance and args.link_term:
+        link = (args.link_term, args.link_distance)
+
+    # get the volumes in which the term appears
+    volume_Gallica_wrapper = VolumeOccurrence()
+    gallica_records = await volume_Gallica_wrapper.get(
+        terms=args.terms,
+        start_date=make_date_from_year_mon_day(args.year, args.month, args.day),
+        end_date=make_date_from_year_mon_day(args.end_year, args.end_month, args.day),
+        codes=args.codes,
+        source=args.source,
+        link=link,
+        limit=args.limit,
+        start_index=args.cursor or 0,
+        sort=args.sort,
+        on_get_total_records=on_get_total_records,
+        on_get_origin_urls=on_get_origin_urls,
+        session=session,
+    )
+
+    return list(gallica_records)
+
+
+async def get_all_occurrences_row_divide(
+    keyed_docs: Dict[str, VolumeRecord],
+    session: aiohttp.ClientSession,
+):
+    """Gets all occurrences of a term in a given time period, and returns a list of records for each occurrence."""
+
+    context = await get_all_context_in_documents(list(keyed_docs.values()), session)
+    for context_response in context:
+        record = keyed_docs[context_response.ark]
+        page_rows = build_row_record_from_ContentSearch_response(
+            record, context_response
+        )
+        yield GallicaRowContext(**record.dict(), context=[row for row in page_rows])
+
+
+async def get_sample_occurrences_row_divide(
+    keyed_docs: Dict[str, VolumeRecord],
+    session: aiohttp.ClientSession,
+):
+    """Gets a sample of occurrences of a term in a given time period, and returns a list of records for each occurrence."""
+
+    context = await get_sample_context_in_documents(list(keyed_docs.values()), session)
+    for context_response in context:
+        record = keyed_docs[context_response.ark]
+        page_rows = build_row_record_from_extract(record, context_response)
+        yield GallicaRowContext(**record.dict(), context=[row for row in page_rows])
+
+
+async def get_all_occurrences_page_grouped(
+    keyed_docs: Dict[str, VolumeRecord],
+    session: aiohttp.ClientSession,
+):
+    """Gets all occurrences of a term in a given time period, and returns a list of records for each occurrence."""
+
+    context = await get_all_context_in_documents(list(keyed_docs.values()), session)
+    for context_response in context:
+        record = keyed_docs[context_response.ark]
+        yield GallicaPageContext(
+            **record.dict(), context=[page.context for page in context_response.pages]
+        )
+
+
+async def get_sample_occurrences_page_grouped(
+    keyed_docs: Dict[str, VolumeRecord],
+    session: aiohttp.ClientSession,
+):
+    """Gets a sample of occurrences of a term in a given time period, and returns a list of records for each occurrence."""
+
+    context = await get_sample_context_in_documents(list(keyed_docs.values()), session)
+    for context_response in context:
+        record = keyed_docs[context_response.ark]
+        yield GallicaPageContext(
+            **record.dict(),
+            context=[page.value.contenu for page in context_response.fragment.contenu],
+        )
 
 
 def parse_spans_to_rows(spans: ResultSet[Any], record: VolumeRecord):
@@ -285,38 +406,6 @@ def build_row_record_from_extract(record: VolumeRecord, extract: ExtractRoot):
                 yield row
 
 
-async def get_documents_with_occurrences(
-    args: ContextSearchArgs,
-    on_get_total_records: Callable[[int], None],
-    on_get_origin_urls: Callable[[List[str]], None],
-    session: aiohttp.ClientSession,
-) -> List[VolumeRecord]:
-    """Queries Gallica's SRU and ContentSearch API's to get metadata and context for a given term in the archive."""
-
-    link = None
-    if args.link_distance and args.link_term:
-        link = (args.link_term, args.link_distance)
-
-    # get the volumes in which the term appears
-    volume_Gallica_wrapper = VolumeOccurrence()
-    gallica_records = await volume_Gallica_wrapper.get(
-        terms=args.terms,
-        start_date=make_date_from_year_mon_day(args.year, args.month, args.day),
-        end_date=make_date_from_year_mon_day(args.end_year, args.end_month, args.day),
-        codes=args.codes,
-        source=args.source,
-        link=link,
-        limit=args.limit,
-        start_index=args.cursor or 0,
-        sort=args.sort,
-        on_get_total_records=on_get_total_records,
-        on_get_origin_urls=on_get_origin_urls,
-        session=session,
-    )
-
-    return list(gallica_records)
-
-
 async def get_all_context_in_documents(
     records: List[VolumeRecord],
     session: aiohttp.ClientSession,
@@ -348,60 +437,13 @@ async def get_sample_context_in_documents(
     return list(context)
 
 
-async def get_occurrences_use_ContentSearch(
-    args: ContextSearchArgs,
-    on_get_total_records: Callable[[int], None],
-    on_get_origin_urls: Callable[[List[str]], None],
-    session: aiohttp.ClientSession,
-    row_parser: Callable | None = None,
-    all_context: bool = False,
-):
-    """Queries Gallica's SRU and ContentSearch API's to get context for a given term in the archive."""
-
-    documents = await get_documents_with_occurrences(
-        args=args,
-        on_get_total_records=on_get_total_records,
-        on_get_origin_urls=on_get_origin_urls,
-        session=session,
-    )
-    keyed_documents = {record.ark: record for record in documents}
-    if all_context:
-        context = await get_all_context_in_documents(documents, session)
-    else:
-        context = await get_sample_context_in_documents(documents, session)
-    for context_response in context:
-        corresponding_record = keyed_documents[context_response.ark]
-        if row_parser:
-            # Split the Gallica context response along (...)
-            page_rows = row_parser(corresponding_record, context_response)
-            yield GallicaRowContext(
-                **corresponding_record.dict(),
-                context=[row for row in page_rows],
-            )
-        else:
-            if type(context_response) is HTMLContext:
-                context = [page.context for page in context_response.pages]
-            elif type(context_response) is ExtractRoot:
-                context = [
-                    snippet.value.contenu
-                    for snippet in context_response.fragment.contenu
-                ]
-            else:
-                raise ValueError(
-                    f"Unknown context response type: {type(context_response)}"
-                )
-            yield GallicaPageContext(
-                **corresponding_record.dict(),
-                context=context,
-            )
-
-
+# TODO: rewrite, bring all_context up
 async def get_occurrences_use_RequestDigitalElement(
     args: ContextSearchArgs,
     on_get_total_records: Callable[[int], None],
     on_get_origin_urls: Callable[[List[str]], None],
     session: aiohttp.ClientSession,
-    all_context: bool = False,
+    all_context: Optional[bool] = False,
 ) -> List[GallicaRecordFullPageText]:
     """Queries Gallica's SRU, ContentSearch, and RequestDigitalElement API's to get metadata and page text for term occurrences."""
 
