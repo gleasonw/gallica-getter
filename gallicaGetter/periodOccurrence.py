@@ -12,7 +12,7 @@ from typing import Generator, List, Literal, Optional
 @dataclass(slots=True)
 class PeriodRecord:
     _date: Date
-    count: int
+    count: float
     term: str
 
     @property

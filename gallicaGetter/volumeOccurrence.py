@@ -128,6 +128,7 @@ class VolumeOccurrence(GallicaWrapper):
                     base_queries,
                     session=session,
                     limit=limit,
+                    semaphore=semaphore,
                 )
             else:
                 # num results less than 50, the base query is fine

@@ -56,7 +56,6 @@ async def get(
     if num_retries > 3:
         raise aiohttp.ClientConnectionError("too many retries")
     if semaphore:
-        print(semaphore._value)
         async with semaphore:
             return await get(
                 query=query,

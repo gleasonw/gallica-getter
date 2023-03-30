@@ -4,7 +4,14 @@ import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
-from typing import Any, Callable, Dict, Generator, List, Literal, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+)
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.mostFrequent import get_gallica_core
@@ -36,7 +43,7 @@ app.add_middleware(
 )
 
 # More than 40-50 triggers a rate limit
-MAX_CONCURRENT_REQUESTS_TO_GALLICA = 20
+MAX_CONCURRENT_REQUESTS_TO_GALLICA = 10
 
 
 @app.get("/")
@@ -93,6 +100,41 @@ async def most_frequent_terms(
             )
     top = Counter(counts).most_common(top_n)
     return [MostFrequentRecord(term=term, count=count) for term, count in top]
+
+
+@app.get("/api/topPapers")
+async def top_papers(
+    term: List[str] = Query(...),
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    end_year: Optional[int] = None,
+    end_month: Optional[int] = None,
+):
+    volume_wrapper = VolumeOccurrence()
+    top_papers: Dict[str, int] = {}
+    sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS_TO_GALLICA)
+    async with aiohttp.ClientSession() as session:
+        try:
+            volumes = await volume_wrapper.get(
+                terms=term,
+                start_date=make_date_from_year_mon_day(year=year, month=month, day=1),
+                end_date=make_date_from_year_mon_day(
+                    year=end_year, month=end_month, day=1
+                ),
+                session=session,
+                semaphore=sem,
+                get_all_results=True,
+            )
+            for volume in volumes:
+                if volume.paper_title not in top_papers:
+                    top_papers[volume.paper_title] = 0
+                top_papers[volume.paper_title] += 1
+            return Counter(top_papers).most_common(10)
+
+        except aiohttp.client_exceptions.ClientConnectorError:
+            return HTTPException(
+                status_code=503, detail="Could not connect to Gallica."
+            )
 
 
 @app.get("/api/gallicaRecords")
@@ -240,7 +282,7 @@ async def get_documents_with_occurrences(
     session: aiohttp.ClientSession,
     semaphore: asyncio.Semaphore,
 ) -> List[VolumeRecord]:
-    """Queries Gallica's SRU and ContentSearch API's to get metadata and context for a given term in the archive."""
+    """Queries Gallica's SRU API to get metadata for a given term in the archive."""
 
     link = None
     if args.link_distance and args.link_term:
@@ -277,7 +319,7 @@ async def get_context_parse_by_row(
     """Gets all occurrences of a term in a given time period, and returns a list of records for each occurrence."""
 
     for context_response in await context_source(
-        records=list(keyed_docs.values()), session=session, semaphore=sem
+        list(keyed_docs.values()), session, sem
     ):
         record = keyed_docs[context_response.ark]
         page_rows = row_splitter(record, context_response)
@@ -307,6 +349,7 @@ async def get_context_include_full_page(
     sem: asyncio.Semaphore,
     context_source: Callable,
 ):
+    """Queries Context and PageText to get the text of each page a term occurs on."""
     page_text_wrapper = PageText()
     queries: List[PageQuery] = []
 
@@ -321,8 +364,6 @@ async def get_context_include_full_page(
     ):
         record = keyed_docs[context_response.ark]
         for page in context_response.pages:
-            if type(page.page_num) is not int:
-                continue
             queries.append(
                 PageQuery(
                     ark=record.ark,
