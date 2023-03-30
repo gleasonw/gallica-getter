@@ -42,7 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# More than 40-50 triggers a rate limit
+# More than 20-30 triggers a rate limit
 MAX_CONCURRENT_REQUESTS_TO_GALLICA = 10
 
 
@@ -115,7 +115,7 @@ async def top_papers(
     sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS_TO_GALLICA)
     async with aiohttp.ClientSession() as session:
         try:
-            volumes = await volume_wrapper.get(
+            for volume in await volume_wrapper.get(
                 terms=term,
                 start_date=make_date_from_year_mon_day(year=year, month=month, day=1),
                 end_date=make_date_from_year_mon_day(
@@ -124,8 +124,7 @@ async def top_papers(
                 session=session,
                 semaphore=sem,
                 get_all_results=True,
-            )
-            for volume in volumes:
+                ):
                 if volume.paper_title not in top_papers:
                     top_papers[volume.paper_title] = 0
                 top_papers[volume.paper_title] += 1
