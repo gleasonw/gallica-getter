@@ -16,10 +16,13 @@ from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.mostFrequent import get_gallica_core
 from gallicaGetter.pageText import PageQuery, PageText
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
+from gallicaGetter.queries import VolumeQuery
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
+from gallicaGetter.utils.index_query_builds import get_num_results_for_queries
+import psycopg
 
 from models import (
     ContextRow,
@@ -42,8 +45,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# More than 40-50 triggers a rate limit
-MAX_CONCURRENT_REQUESTS_TO_GALLICA = 10
+# More than 20-30 triggers a rate limit
+MAX_CONCURRENT_REQUESTS = 10
+MAX_CSV_RECORDS = 20000
 
 
 @app.get("/")
@@ -69,37 +73,130 @@ async def page_text(ark: str, page: int):
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
-@app.get("/api/mostFrequentTerms")
-async def most_frequent_terms(
-    root_gram: str,
-    sample_size: int,
-    top_n: int = 10,
-    start_year: Optional[int] = None,
-    start_month: Optional[int] = None,
-    end_year: Optional[int] = None,
-    end_month: Optional[int] = None,
-):
-    if sample_size and sample_size > 50:
-        sample_size = 50
+async def stream_csv(args: ContextSearchArgs, id: int):
+    link = None
+    if args.link_distance and args.link_term:
+        link_distance = int(args.link_distance)
+        link = (args.link_term, link_distance)
+
+    total_records = 0
+    origin_urls = []
+
+    def set_total_records(num_records: int):
+        nonlocal total_records
+        total_records = num_records
+
+    def set_origin_urls(urls: List[str]):
+        nonlocal origin_urls
+        origin_urls = urls
+
     async with aiohttp.ClientSession() as session:
-        try:
-            counts = await get_gallica_core(
-                root_gram=root_gram,
-                start_date=make_date_from_year_mon_day(
-                    year=start_year, month=start_month, day=1
-                ),
-                end_date=make_date_from_year_mon_day(
-                    year=end_year, month=end_month, day=1
-                ),
-                sample_size=sample_size,
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+        volume_Gallica_wrapper = VolumeOccurrence()
+        gallica_records = await volume_Gallica_wrapper.get(
+            terms=args.terms,
+            start_date=make_date_from_year_mon_day(args.year, args.month, 1),
+            end_date=make_date_from_year_mon_day(args.end_year, args.end_month, 1),
+            codes=args.codes,
+            source=args.source,
+            link=link,
+            sort=args.sort,
+            on_get_total_records=set_total_records,
+            on_get_origin_urls=set_origin_urls,
+            get_all_results=True,
+            session=session,
+            semaphore=semaphore,
+        )
+
+        # get the context for those volumes
+        content_wrapper = Context()
+
+        batch_of_num_workers: List[VolumeRecord] = []
+        continue_loop = True
+
+        while continue_loop:
+            for _ in range(MAX_CONCURRENT_REQUESTS):
+                try:
+                    batch_of_num_workers.append(next(gallica_records))
+                except StopIteration:
+                    continue_loop = False
+                    break
+            code_dict = {record.ark: record for record in batch_of_num_workers}
+            context = await content_wrapper.get(
+                [
+                    (record.url.split("/")[-1], record.terms)
+                    for record in batch_of_num_workers
+                ],
                 session=session,
+                semaphore=semaphore,
             )
-        except aiohttp.client_exceptions.ClientConnectorError:
-            return HTTPException(
-                status_code=503, detail="Could not connect to Gallica."
+            for context_response in context:
+                record = code_dict[context_response.ark]
+                rows = build_row_record_from_ContentSearch_response(
+                    record, context_response
+                )
+                for context_row in rows:
+                    yield (
+                        id,
+                        record.paper_title,
+                        record.paper_code,
+                        record.date,
+                        context_row.page_url,
+                        context_row.left_context,
+                        context_row.pivot,
+                        context_row.right_context,
+                    )
+
+
+async def download_csv_to_db(args: ContextSearchArgs, id: int):
+    # iterate over stream_csv and write rows to db
+    async with await psycopg.AsyncConnection(
+        host=os.environ["POSTGRES_HOST"],
+        port=os.environ["POSTGRES_PORT"],
+        user=os.environ["POSTGRES_USER"],
+        password=os.environ["POSTGRES_PASSWORD"],
+        database=os.environ["POSTGRES_DB"],
+    ) as conn:
+        async with conn.cursor() as cur:
+            async with cur.copy(
+                f"copy csv (request_id, paper_title, paper_code, date, page_url, left_context, pivot, right_context) from stdin"
+            ) as copy:
+                async for row in stream_csv(args, id):
+                    await copy.write_row(row)
+            await conn.commit()
+
+
+csv_id = 0
+
+
+def get_csv_id():
+    global csv_id
+    csv_id += 1
+    return csv_id
+
+
+@app.post("/api/downloadCSV")
+async def begin_download_csv(
+    args: ContextSearchArgs, background_tasks: BackgroundTasks
+):
+    query = VolumeQuery(
+        terms=args.terms,
+        start_date=str(args.year) or "1000",
+        end_date=str(args.end_year) or "2020",
+        start_index=0,
+        limit=1,
+    )
+    async with aiohttp.ClientSession() as session:
+        num_records = await get_num_results_for_queries([query], session=session)
+        num_records = int(num_records[0].gallica_results_for_params)
+        if num_records > MAX_CSV_RECORDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Too many records to download ({num_records}). The current limit is {MAX_CSV_RECORDS}. Please narrow your search.",
             )
-    top = Counter(counts).most_common(top_n)
-    return [MostFrequentRecord(term=term, count=count) for term, count in top]
+    id = get_csv_id()
+    background_tasks.add_task(download_csv_to_db, args, id)
+    return {"request_id": id}
 
 
 @app.get("/api/topPapers")
@@ -112,7 +209,7 @@ async def top_papers(
 ):
     volume_wrapper = VolumeOccurrence()
     top_papers: Dict[str, int] = {}
-    sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS_TO_GALLICA)
+    sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
     async with aiohttp.ClientSession() as session:
         try:
             volumes = await volume_wrapper.get(
@@ -511,6 +608,7 @@ async def get_sample_context_in_documents(
         session=session,
         semaphore=semaphore,
     )
+    test = [i for i in range(20)] if 1 == 1 else 2
     return list(context)
 
 
