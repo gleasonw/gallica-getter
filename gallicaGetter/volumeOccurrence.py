@@ -65,7 +65,7 @@ class VolumeOccurrence(GallicaWrapper):
     ):
         for response in gallica_responses:
             for i, record in enumerate(get_records_from_xml(response.text)):
-                if self.on_get_total_records and i == 0:
+                if i == 0 and self.on_get_total_records:
                     self.on_get_total_records(
                         get_num_records_from_gallica_xml(response.text)
                     )
@@ -132,13 +132,14 @@ class VolumeOccurrence(GallicaWrapper):
                     session=session,
                     limit=limit,
                     semaphore=semaphore,
+                    on_get_total_records=on_get_total_records,
                 )
             else:
                 # num results less than 50, the base query is fine
                 queries = base_queries
-        if on_get_total_records:
-            # If we want to know the total number of records, we need to assign the callback
-            self.on_get_total_records = on_get_total_records
+                # we also need to assign the total records callback to the instance,
+                # since we will only know during the parse step
+                self.on_get_total_records = on_get_total_records
         if on_get_origin_urls:
             url = "https://gallica.bnf.fr/SRU?"
             on_get_origin_urls(

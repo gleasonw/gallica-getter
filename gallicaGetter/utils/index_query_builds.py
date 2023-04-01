@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import aiohttp
 from gallicaGetter.fetch import fetch_queries_concurrently
@@ -14,6 +14,7 @@ async def build_indexed_queries(
     semaphore: Optional[asyncio.Semaphore] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
+    on_get_total_records: Optional[Callable[[int], None]] = None,
 ) -> List[VolumeQuery] | List[PaperQuery]:
     if limit:
         queries_with_num_results = []
@@ -24,6 +25,8 @@ async def build_indexed_queries(
         queries_with_num_results = await get_num_results_for_queries(
             queries, session, semaphore
         )
+    if on_get_total_records:
+        on_get_total_records(sum(query.gallica_results_for_params for query in queries))
     return index_queries_by_num_results(
         queries_with_num_results, records_per_query=limit or 50
     )

@@ -22,6 +22,9 @@ from models import (
     GallicaRecordFullPageText,
     GallicaRowContext,
     MostFrequentRecord,
+    Paper,
+    TopPaper,
+    TopPaperResponse,
     UserResponse,
 )
 
@@ -98,24 +101,6 @@ async def most_frequent_terms(
     return [MostFrequentRecord(term=term, count=count) for term, count in top]
 
 
-class Paper(BaseModel):
-    code: str
-    title: str
-    author: str
-    publisher: Optional[str]
-
-
-class TopPaper(BaseModel):
-    count: int
-    paper: Paper
-
-
-class TopPaperResponse(BaseModel):
-    num_results: int
-    original_query: str
-    top_papers: List[TopPaper]
-
-
 @app.get("/api/topPapers")
 async def top_papers(
     term: List[str] = Query(...),
@@ -123,6 +108,7 @@ async def top_papers(
     month: Optional[int] = None,
     end_year: Optional[int] = None,
     end_month: Optional[int] = None,
+    top_n: int = 10,
 ):
     volume_wrapper = VolumeOccurrence()
     top_papers: Dict[str, TopPaper] = {}
@@ -150,22 +136,21 @@ async def top_papers(
                 semaphore=sem,
                 get_all_results=True,
                 on_get_origin_urls=handle_get_origin_urls,
-                on_get_total_records=handle_get_total_records
+                on_get_total_records=handle_get_total_records,
             ):
                 if volume.paper_title not in top_papers:
                     top_papers[volume.paper_title] = TopPaper(
                         count=1,
                         paper=Paper(
-                            code=volume.ark,
+                            code=volume.paper_code,
                             title=volume.paper_title,
-                            author=volume.author,
                             publisher=volume.publisher,
                         ),
                     )
                 top_papers[volume.paper_title].count += 1
             top_n_papers = sorted(
                 list(top_papers.values()), key=lambda x: x.count, reverse=True
-                )[:10]
+            )[:top_n]
             return TopPaperResponse(
                 num_results=total_records,
                 original_query=origin_url,

@@ -1,7 +1,22 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Literal
 
-from gallicaGetter.context import HTMLContext
+
+class Paper(BaseModel):
+    code: str
+    title: str
+    publisher: Optional[str]
+
+
+class TopPaper(BaseModel):
+    count: int
+    paper: Paper
+
+
+class TopPaperResponse(BaseModel):
+    num_results: int
+    original_query: str
+    top_papers: List[TopPaper]
 
 
 class ContextRow(BaseModel):
