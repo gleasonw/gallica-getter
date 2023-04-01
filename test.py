@@ -6,9 +6,9 @@ if __name__ == "__main__":
     response = requests.post(
         "http://localhost:8000/api/downloadCSV",
         json={
-            "terms": ["brazza"],
+            "terms": ["seattle"],
             "year": 1900,
-            "end_year": 1905
+            "end_year": 1903
         },
     )
     print(response.text)

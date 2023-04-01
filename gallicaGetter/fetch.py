@@ -68,7 +68,7 @@ async def get(
         elapsed_time = time.perf_counter() - start_time
         # check if we need to retry
         print(response.url)
-        if response.status != 200 and num_retries < 3:
+        if response.status != 200 and num_retries < 6:
             print(f"retrying {num_retries}")
             print(response.status)
             await asyncio.sleep(2**num_retries)

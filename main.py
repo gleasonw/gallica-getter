@@ -1,6 +1,9 @@
 import asyncio
 from collections import Counter
+import csv
+import io
 import os
+import uuid
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
@@ -14,6 +17,7 @@ from typing import (
 )
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
+from gallicaGetter.fetch import Response
 from gallicaGetter.mostFrequent import get_gallica_core
 from gallicaGetter.pageText import PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
@@ -22,6 +26,7 @@ import aiohttp
 from gallicaGetter.queries import VolumeQuery
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from gallicaGetter.utils.index_query_builds import get_num_results_for_queries
+from starlette.responses import StreamingResponse
 import psycopg
 
 from models import (
@@ -46,7 +51,7 @@ app.add_middleware(
 )
 
 # More than 20-30 triggers a rate limit
-MAX_CONCURRENT_REQUESTS = 10
+MAX_CONCURRENT_REQUESTS = 20
 MAX_CSV_RECORDS = 20000
 
 
@@ -73,13 +78,22 @@ async def page_text(ark: str, page: int):
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
-async def stream_csv(args: ContextSearchArgs, id: int):
+csv_progress: Dict[str, int] = {}
+
+
+@app.get("/api/csvProgress")
+async def get_csv_fetch_progress(id: str):
+    return csv_progress[id]
+
+
+async def stream_csv(args: ContextSearchArgs, id: str):
     link = None
     if args.link_distance and args.link_term:
         link_distance = int(args.link_distance)
         link = (args.link_term, link_distance)
 
     total_records = 0
+    fetched = 0
     origin_urls = []
 
     def set_total_records(num_records: int):
@@ -89,6 +103,14 @@ async def stream_csv(args: ContextSearchArgs, id: int):
     def set_origin_urls(urls: List[str]):
         nonlocal origin_urls
         origin_urls = urls
+
+    def handle_receive_response(response: Response):
+        nonlocal fetched
+        print(f"Received response {fetched} of {total_records}")
+        fetched += 1
+        if total_records > 0:
+            current_progress = int(fetched / total_records * 100)
+            csv_progress[id] = current_progress
 
     async with aiohttp.ClientSession() as session:
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
@@ -103,6 +125,7 @@ async def stream_csv(args: ContextSearchArgs, id: int):
             sort=args.sort,
             on_get_total_records=set_total_records,
             on_get_origin_urls=set_origin_urls,
+            on_receive_response=handle_receive_response,
             get_all_results=True,
             session=session,
             semaphore=semaphore,
@@ -140,7 +163,7 @@ async def stream_csv(args: ContextSearchArgs, id: int):
                         id,
                         record.paper_title,
                         record.paper_code,
-                        record.date,
+                        str(record.date),
                         context_row.page_url,
                         context_row.left_context,
                         context_row.pivot,
@@ -148,31 +171,56 @@ async def stream_csv(args: ContextSearchArgs, id: int):
                     )
 
 
-async def download_csv_to_db(args: ContextSearchArgs, id: int):
+@app.get("/api/retrieveCSV")
+async def retrieve_csv(id: int):
+    async with await psycopg.AsyncConnection.connect(
+        "dbname=csv user=will password=postgres host=localhost port=5432"
+    ) as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "select * from store_csv where request_id = %(id)s order by date",
+                {"id": id},
+            )
+            csv_items = await cur.fetchall()
+            csv_file_object = io.StringIO()
+            csv_writer = csv.writer(csv_file_object)
+            csv_writer.writerow(
+                [
+                    "request_id",
+                    "paper_title",
+                    "paper_code",
+                    "date",
+                    "page_url",
+                    "left_context",
+                    "pivot",
+                    "right_context",
+                ]
+            )
+            for row in csv_items:
+                csv_writer.writerow(row)
+            csv_file_object.seek(0)
+            await cur.execute(
+                "delete from store_csv where request_id = %(id)s", {"id": id}
+            )
+            return StreamingResponse(
+                csv_file_object,
+                media_type="text/csv",
+                headers={"Content-Disposition": "attachment; filename=results.csv"},
+            )
+
+
+async def put_context_to_db(args: ContextSearchArgs, id: str):
     # iterate over stream_csv and write rows to db
-    async with await psycopg.AsyncConnection(
-        host=os.environ["POSTGRES_HOST"],
-        port=os.environ["POSTGRES_PORT"],
-        user=os.environ["POSTGRES_USER"],
-        password=os.environ["POSTGRES_PASSWORD"],
-        database=os.environ["POSTGRES_DB"],
+    async with await psycopg.AsyncConnection.connect(
+        "dbname=csv user=will password=postgres host=localhost port=5432"
     ) as conn:
         async with conn.cursor() as cur:
             async with cur.copy(
-                f"copy csv (request_id, paper_title, paper_code, date, page_url, left_context, pivot, right_context) from stdin"
+                f"copy store_csv (request_id, paper_title, paper_code, date, page_url, left_context, pivot, right_context) from stdin"
             ) as copy:
                 async for row in stream_csv(args, id):
                     await copy.write_row(row)
             await conn.commit()
-
-
-csv_id = 0
-
-
-def get_csv_id():
-    global csv_id
-    csv_id += 1
-    return csv_id
 
 
 @app.post("/api/downloadCSV")
@@ -194,8 +242,8 @@ async def begin_download_csv(
                 status_code=400,
                 detail=f"Too many records to download ({num_records}). The current limit is {MAX_CSV_RECORDS}. Please narrow your search.",
             )
-    id = get_csv_id()
-    background_tasks.add_task(download_csv_to_db, args, id)
+    id = str(uuid.uuid4())
+    background_tasks.add_task(put_context_to_db, args, id)
     return {"request_id": id}
 
 
