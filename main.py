@@ -1,17 +1,11 @@
 import asyncio
 from collections import Counter
+from pydantic import BaseModel
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-)
+from typing import Any, Callable, Dict, List, Literal, Optional
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.mostFrequent import get_gallica_core
@@ -41,6 +35,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+#
 
 # More than 20-30 triggers a rate limit
 MAX_CONCURRENT_REQUESTS_TO_GALLICA = 10
@@ -102,6 +98,24 @@ async def most_frequent_terms(
     return [MostFrequentRecord(term=term, count=count) for term, count in top]
 
 
+class Paper(BaseModel):
+    code: str
+    title: str
+    author: str
+    publisher: Optional[str]
+
+
+class TopPaper(BaseModel):
+    count: int
+    paper: Paper
+
+
+class TopPaperResponse(BaseModel):
+    num_results: int
+    original_query: str
+    top_papers: List[TopPaper]
+
+
 @app.get("/api/topPapers")
 async def top_papers(
     term: List[str] = Query(...),
@@ -111,8 +125,19 @@ async def top_papers(
     end_month: Optional[int] = None,
 ):
     volume_wrapper = VolumeOccurrence()
-    top_papers: Dict[str, int] = {}
+    top_papers: Dict[str, TopPaper] = {}
     sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS_TO_GALLICA)
+    origin_url = ""
+    total_records = 0
+
+    def handle_get_origin_urls(origin_urls: List[str]):
+        nonlocal origin_url
+        origin_url = origin_urls[0]
+
+    def handle_get_total_records(total: int):
+        nonlocal total_records
+        total_records = total
+
     async with aiohttp.ClientSession() as session:
         try:
             for volume in await volume_wrapper.get(
@@ -124,11 +149,28 @@ async def top_papers(
                 session=session,
                 semaphore=sem,
                 get_all_results=True,
-                ):
+                on_get_origin_urls=handle_get_origin_urls,
+                on_get_total_records=handle_get_total_records
+            ):
                 if volume.paper_title not in top_papers:
-                    top_papers[volume.paper_title] = 0
-                top_papers[volume.paper_title] += 1
-            return Counter(top_papers).most_common(10)
+                    top_papers[volume.paper_title] = TopPaper(
+                        count=1,
+                        paper=Paper(
+                            code=volume.ark,
+                            title=volume.paper_title,
+                            author=volume.author,
+                            publisher=volume.publisher,
+                        ),
+                    )
+                top_papers[volume.paper_title].count += 1
+            top_n_papers = sorted(
+                list(top_papers.values()), key=lambda x: x.count, reverse=True
+                )[:10]
+            return TopPaperResponse(
+                num_results=total_records,
+                original_query=origin_url,
+                top_papers=top_n_papers,
+            )
 
         except aiohttp.client_exceptions.ClientConnectorError:
             return HTTPException(
@@ -510,6 +552,7 @@ async def get_sample_context_in_documents(
         session=session,
         semaphore=semaphore,
     )
+
     return list(context)
 
 

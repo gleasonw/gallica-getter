@@ -112,6 +112,14 @@ def get_author_from_record_xml(record) -> str:
     return ""
 
 
+def get_publisher_from_record_xml(record) -> str:
+    xml = get_data_from_record_root(record)
+    publisher_element = xml.find("{http://purl.org/dc/elements/1.1/}publisher")
+    if publisher_element is not None:
+        return publisher_element.text
+    return ""
+
+
 def get_ocr_quality_from_record_xml(record) -> str:
     extra_record_xml = record[-1]
     ocr_quality_element = extra_record_xml.find(".//nqamoyen")

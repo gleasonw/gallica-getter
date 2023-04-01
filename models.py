@@ -35,7 +35,9 @@ class GallicaRecordFullPageText(GallicaRecordBase):
 
 
 class UserResponse(BaseModel):
-    records: List[GallicaRowContext] | List[GallicaPageContext] | List[GallicaRecordFullPageText]
+    records: List[GallicaRowContext] | List[GallicaPageContext] | List[
+        GallicaRecordFullPageText
+    ]
     num_results: int
     origin_urls: List[str]
 

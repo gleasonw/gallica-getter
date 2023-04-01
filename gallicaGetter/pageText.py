@@ -74,9 +74,7 @@ class PageText(GallicaWrapper):
                     for string_element in string_elements:
                         text.append(string_element.attrib.get("CONTENT"))
             yield ConvertedXMLPage(
-                page_num=response.query.page_num,
-                ark=response.query.ark,
-                text=" ".join(text),
+                page_num=response.query.page_num, ark=response.query.ark, nonsense=1
             )
 
     async def get(
