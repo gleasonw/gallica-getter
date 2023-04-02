@@ -67,7 +67,6 @@ async def get(
     async with session.get(query.endpoint_url, params=query.params) as response:
         elapsed_time = time.perf_counter() - start_time
         # check if we need to retry
-        print(response.url)
         if response.status != 200 and num_retries < 3:
             print(f"retrying {num_retries}")
             print(response.status)
