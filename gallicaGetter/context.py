@@ -46,7 +46,20 @@ class Context(GallicaWrapper):
         session: aiohttp.ClientSession | None = None,
         semaphore: asyncio.Semaphore | None = None,
     ) -> Generator[HTMLContext, None, None]:
-        queries = [ContentQuery(ark=pair[0], terms=pair[1]) for pair in context_pairs]
+        queries: List[ContentQuery] = []
+        for pair in context_pairs:
+            terms = pair[1]
+            wrapped_terms: List[str] = []
+            # TODO: wrap terms in quotes for exact search in document... might be a better way
+            for term in terms:
+                if term.startswith('"') and term.endswith('"'):
+                    wrapped_terms.append(term)
+                else:
+                    if " " in term:
+                        wrapped_terms.append(f'"{term}"')
+                    else:
+                        wrapped_terms.append(term)
+            queries.append(ContentQuery(ark=pair[0], terms=wrapped_terms))
         return self.parse(
             await fetch_queries_concurrently(
                 queries=queries,

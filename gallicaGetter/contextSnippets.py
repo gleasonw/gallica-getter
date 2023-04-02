@@ -80,9 +80,12 @@ class ContextSnippets(GallicaWrapper):
         session: aiohttp.ClientSession | None = None,
         semaphore: asyncio.Semaphore | None = None,
     ) -> Generator[ExtractRoot, None, None]:
-        queries = [
-            ContextSnippetQuery(ark=pair[0], term=pair[1]) for pair in context_pairs
-        ]
+        queries: List[ContextSnippetQuery] = []
+        for pair in context_pairs:
+            term = pair[1]
+            if " " in term and not (term.startswith('"') and term.endswith('"')):
+                term = f'"{term}"'
+            queries.append(ContextSnippetQuery(ark=pair[0], term=term))
         return self.parse(
             await fetch_queries_concurrently(
                 queries=queries,

@@ -1,6 +1,5 @@
 import asyncio
 from collections import Counter
-from pydantic import BaseModel
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
@@ -183,23 +182,12 @@ async def fetch_records_from_gallica(
 ):
     """API endpoint for the context table. To fetch multiple terms linked with OR in the Gallica CQL, pass multiple terms parameters: /api/gallicaRecords?terms=term1&terms=term2&terms=term3"""
 
-    # ensure multi-word terms are wrapped in quotes for an exact search in Gallica; don't double wrap though
-    wrapped_terms = []
-    for term in terms:
-        if term.startswith('"') and term.endswith('"'):
-            wrapped_terms.append(term)
-        else:
-            if " " in term:
-                wrapped_terms.append(f'"{term}"')
-            else:
-                wrapped_terms.append(term)
-
     args = ContextSearchArgs(
         year=year,
         month=month,
         end_year=end_year,
         end_month=end_month,
-        terms=wrapped_terms,
+        terms=terms,
         codes=codes,
         cursor=cursor,
         limit=limit,
