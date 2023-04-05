@@ -28,7 +28,7 @@ from models import (
 
 
 
-MAX_RECORDS = 30000
+MAX_RECORDS = 50000
 
 gallica_session: aiohttp.ClientSession
 
