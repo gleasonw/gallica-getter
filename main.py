@@ -30,11 +30,13 @@ from models import (
 
 MAX_RECORDS = 30000
 
-gallica_session = aiohttp.ClientSession()
+gallica_session: aiohttp.ClientSession
 
 
 @asynccontextmanager
 async def gallica_session_lifespan(app: FastAPI):
+    global gallica_session
+    gallica_session = aiohttp.ClientSession()
     async with gallica_session:
         yield
 
