@@ -1,5 +1,5 @@
 import asyncio
-from collections import Counter
+from contextlib import asynccontextmanager
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
@@ -9,7 +9,7 @@ from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.mostFrequent import get_gallica_core
 from gallicaGetter.pageText import PageQuery, PageText
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
@@ -20,15 +20,26 @@ from models import (
     GallicaPageContext,
     GallicaRecordFullPageText,
     GallicaRowContext,
-    MostFrequentRecord,
     Paper,
     TopPaper,
     TopPaperResponse,
     UserResponse,
 )
 
-app = FastAPI()
 
+
+MAX_RECORDS = 30000
+
+gallica_session = aiohttp.ClientSession()
+
+
+@asynccontextmanager
+async def gallica_session_lifespan(app: FastAPI):
+    async with gallica_session:
+        yield
+
+
+app = FastAPI(lifespan=gallica_session_lifespan)
 origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
@@ -38,10 +49,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#
+# limit number of requests for routes... top_paper is more intensive
 
-# More than 20-30 triggers a rate limit
-MAX_CONCURRENT_REQUESTS_TO_GALLICA = 10
+top_paper_semaphore = asyncio.Semaphore(5)
+context_semaphore = asyncio.Semaphore(20)
+
+async def paper_sem():
+    return top_paper_semaphore
+
+async def context_sem():
+    return context_semaphore
+
+
+# this cache will be wiped on every GCP sleep, but helpful in the short term
+simple_cache = {}
+
+
+async def cache():
+    return simple_cache
+
+
+async def date_params(
+    year: Optional[int] = 0,
+    month: Optional[int] = 0,
+    end_year: Optional[int] = 0,
+    end_month: Optional[int] = 0,
+):
+    return {
+        "start_date": make_date_from_year_mon_day(year=year, month=month, day=1),
+        "end_date": make_date_from_year_mon_day(year=end_year, month=end_month, day=1),
+    }
 
 
 @app.get("/")
@@ -53,65 +90,30 @@ def index():
 async def page_text(ark: str, page: int):
     """Retrieve the full text of a document page on Gallica."""
     try:
-        async with aiohttp.ClientSession() as session:
-            page_text_getter = PageText()
-            page_data = await page_text_getter.get(
-                page_queries=[PageQuery(ark=ark, page_num=page)],
-                session=session,
-            )
-            page_data = list(page_data)
-            if page_data and len(page_data) > 0:
-                return page_data[0]
-            return None
+        page_text_getter = PageText()
+        page_data = await page_text_getter.get(
+            page_queries=[PageQuery(ark=ark, page_num=page)],
+            session=gallica_session,
+        )
+        page_data = list(page_data)
+        if page_data and len(page_data) > 0:
+            return page_data[0]
+        return None
     except aiohttp.client_exceptions.ClientConnectorError:
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
-
-
-@app.get("/api/mostFrequentTerms")
-async def most_frequent_terms(
-    root_gram: str,
-    sample_size: int,
-    top_n: int = 10,
-    start_year: Optional[int] = None,
-    start_month: Optional[int] = None,
-    end_year: Optional[int] = None,
-    end_month: Optional[int] = None,
-):
-    if sample_size and sample_size > 50:
-        sample_size = 50
-    async with aiohttp.ClientSession() as session:
-        try:
-            counts = await get_gallica_core(
-                root_gram=root_gram,
-                start_date=make_date_from_year_mon_day(
-                    year=start_year, month=start_month, day=1
-                ),
-                end_date=make_date_from_year_mon_day(
-                    year=end_year, month=end_month, day=1
-                ),
-                sample_size=sample_size,
-                session=session,
-            )
-        except aiohttp.client_exceptions.ClientConnectorError:
-            return HTTPException(
-                status_code=503, detail="Could not connect to Gallica."
-            )
-    top = Counter(counts).most_common(top_n)
-    return [MostFrequentRecord(term=term, count=count) for term, count in top]
 
 
 @app.get("/api/topPapers")
 async def top_papers(
     term: List[str] = Query(...),
-    year: Optional[int] = None,
-    month: Optional[int] = None,
-    end_year: Optional[int] = None,
-    end_month: Optional[int] = None,
-    top_n: int = 10,
+    date_params: dict = Depends(date_params),
+    semaphore: asyncio.Semaphore = Depends(paper_sem),
+    cache: dict = Depends(cache),
 ):
+    if cache_val := cache.get((*term, *date_params.values())):
+        return cache_val
     volume_wrapper = VolumeOccurrence()
     top_papers: Dict[str, TopPaper] = {}
-    sem = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS_TO_GALLICA)
     origin_url = ""
     total_records = 0
 
@@ -121,56 +123,58 @@ async def top_papers(
 
     def handle_get_total_records(total: int):
         nonlocal total_records
+        if total > MAX_RECORDS:
+            total_comma_separated = format(total, ",")
+            max_comma = format(MAX_RECORDS, ",")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Too many records on Gallica for those params ({total_comma_separated}), my current limit is {max_comma}.",
+            )
         total_records = total
 
-    async with aiohttp.ClientSession() as session:
-        try:
-            for volume in await volume_wrapper.get(
-                terms=term,
-                start_date=make_date_from_year_mon_day(year=year, month=month, day=1),
-                end_date=make_date_from_year_mon_day(
-                    year=end_year, month=end_month, day=1
-                ),
-                session=session,
-                semaphore=sem,
-                get_all_results=True,
-                on_get_origin_urls=handle_get_origin_urls,
-                on_get_total_records=handle_get_total_records,
-            ):
-                if volume.paper_title not in top_papers:
-                    top_papers[volume.paper_title] = TopPaper(
-                        count=1,
-                        paper=Paper(
-                            code=volume.paper_code,
-                            title=volume.paper_title,
-                            publisher=volume.publisher,
-                        ),
-                    )
-                top_papers[volume.paper_title].count += 1
-            top_n_papers = sorted(
-                list(top_papers.values()), key=lambda x: x.count, reverse=True
-            )[:top_n]
-            return TopPaperResponse(
-                num_results=total_records,
-                original_query=origin_url,
-                top_papers=top_n_papers,
-            )
+    try:
+        volume_generator = await volume_wrapper.get(
+            terms=term,
+            start_date=date_params["start_date"],
+            end_date=date_params["end_date"],
+            session=gallica_session,
+            semaphore=semaphore,
+            get_all_results=True,
+            on_get_origin_urls=handle_get_origin_urls,
+            on_get_total_records=handle_get_total_records,
+        )
+        for volume in volume_generator:
+            if volume.paper_title not in top_papers:
+                top_papers[volume.paper_title] = TopPaper(
+                    count=1,
+                    paper=Paper(
+                        code=volume.paper_code,
+                        title=volume.paper_title,
+                        publisher=volume.publisher,
+                    ),
+                )
+            top_papers[volume.paper_title].count += 1
+        top_n_papers = sorted(
+            list(top_papers.values()), key=lambda x: x.count, reverse=True
+        )[:10]
+        response = TopPaperResponse(
+            num_results=total_records,
+            original_query=origin_url,
+            top_papers=top_n_papers,
+        )
+        cache[(*term, *date_params.values())] = response
+        return response
 
-        except aiohttp.client_exceptions.ClientConnectorError:
-            return HTTPException(
-                status_code=503, detail="Could not connect to Gallica."
-            )
+    except aiohttp.client_exceptions.ClientConnectorError:
+        return HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
 @app.get("/api/gallicaRecords")
 async def fetch_records_from_gallica(
-    year: Optional[int] = 0,
-    month: Optional[int] = 0,
-    end_year: Optional[int] = 0,
-    end_month: Optional[int] = 0,
     terms: List[str] = Query(),
     codes: Optional[List[str]] = Query(None),
     cursor: Optional[int] = 0,
+    date_params: dict = Depends(date_params),
     limit: Optional[int] = 10,
     link_term: Optional[str] = None,
     link_distance: Optional[int] = 0,
@@ -179,14 +183,14 @@ async def fetch_records_from_gallica(
     row_split: Optional[bool] = False,
     include_page_text: Optional[bool] = False,
     all_context: Optional[bool] = False,
+    cache: dict = Depends(cache),
+    semaphore: asyncio.Semaphore = Depends(context_sem),
 ):
     """API endpoint for the context table. To fetch multiple terms linked with OR in the Gallica CQL, pass multiple terms parameters: /api/gallicaRecords?terms=term1&terms=term2&terms=term3"""
 
     args = ContextSearchArgs(
-        year=year,
-        month=month,
-        end_year=end_year,
-        end_month=end_month,
+        start_date=date_params["start_date"],
+        end_date=date_params["end_date"],
         terms=terms,
         codes=codes,
         cursor=cursor,
@@ -196,6 +200,8 @@ async def fetch_records_from_gallica(
         source=source,
         sort=sort,
     )
+    if cache_val := cache.get((args.json(), row_split, include_page_text, all_context)):
+        return cache_val
 
     if limit and limit > 50:
         raise HTTPException(
@@ -204,83 +210,82 @@ async def fetch_records_from_gallica(
         )
 
     try:
-        async with aiohttp.ClientSession() as session:
-            total_records = 0
-            origin_urls = []
+        total_records = 0
+        origin_urls = []
 
-            def set_total_records(num_records: int):
-                nonlocal total_records
-                total_records = num_records
+        def set_total_records(num_records: int):
+            nonlocal total_records
+            total_records = num_records
 
-            def set_origin_urls(urls: List[str]):
-                nonlocal origin_urls
-                origin_urls = urls
+        def set_origin_urls(urls: List[str]):
+            nonlocal origin_urls
+            origin_urls = urls
 
-            # build a semaphore to limit the number of concurrent requests to Gallica, this will be passed around as props
-            sem = asyncio.Semaphore(10)
+        keyed_docs = {
+            record.ark: record
+            for record in await get_documents_with_occurrences(
+                args=args,
+                on_get_total_records=set_total_records,
+                on_get_origin_urls=set_origin_urls,
+                session=gallica_session,
+                semaphore=semaphore,
+            )
+        }
 
-            keyed_docs = {
-                record.ark: record
-                for record in await get_documents_with_occurrences(
-                    args=args,
-                    on_get_total_records=set_total_records,
-                    on_get_origin_urls=set_origin_urls,
-                    session=session,
-                    semaphore=sem,
+        props = {
+            "session": gallica_session,
+            "keyed_docs": keyed_docs,
+            "sem": semaphore,
+        }
+
+        if include_page_text and all_context:
+            records = await get_context_include_full_page(
+                **props,
+                context_source=get_all_context_in_documents,
+            )
+        elif include_page_text:
+            records = await get_context_include_full_page(
+                **props, context_source=get_sample_context_in_documents
+            )
+        elif row_split and all_context:
+            records = [
+                record
+                async for record in get_context_parse_by_row(
+                    **props,
+                    context_source=get_all_context_in_documents,
+                    row_splitter=build_row_record_from_ContentSearch_response,
                 )
-            }
-
-            props = {
-                "session": session,
-                "keyed_docs": keyed_docs,
-                "sem": sem,
-            }
-
-            if include_page_text and all_context:
-                records = await get_context_include_full_page(
+            ]
+        elif row_split:
+            records = [
+                record
+                async for record in get_context_parse_by_row(
+                    **props,
+                    context_source=get_sample_context_in_documents,
+                    row_splitter=build_row_record_from_extract,
+                )
+            ]
+        elif all_context:
+            records = [
+                record
+                async for record in get_raw_context(
                     **props, context_source=get_all_context_in_documents
                 )
-            elif include_page_text:
-                records = await get_context_include_full_page(
+            ]
+        else:
+            records = [
+                record
+                async for record in get_raw_context(
                     **props, context_source=get_sample_context_in_documents
                 )
-            elif row_split and all_context:
-                records = [
-                    record
-                    async for record in get_context_parse_by_row(
-                        **props,
-                        context_source=get_all_context_in_documents,
-                        row_splitter=build_row_record_from_ContentSearch_response,
-                    )
-                ]
-            elif row_split:
-                records = [
-                    record
-                    async for record in get_context_parse_by_row(
-                        **props,
-                        context_source=get_sample_context_in_documents,
-                        row_splitter=build_row_record_from_extract,
-                    )
-                ]
-            elif all_context:
-                records = [
-                    record
-                    async for record in get_raw_context(
-                        **props, context_source=get_all_context_in_documents
-                    )
-                ]
-            else:
-                records = [
-                    record
-                    async for record in get_raw_context(
-                        **props, context_source=get_sample_context_in_documents
-                    )
-                ]
-            return UserResponse(
-                records=records,
-                num_results=total_records,
-                origin_urls=origin_urls,
-            )
+            ]
+        response = UserResponse(
+            records=records,
+            num_results=total_records,
+            origin_urls=origin_urls,
+        )
+        cache[(args.json(), row_split, include_page_text, all_context)] = response
+        return response
 
     except (
         aiohttp.client_exceptions.ClientConnectorError,
@@ -306,8 +311,8 @@ async def get_documents_with_occurrences(
     volume_Gallica_wrapper = VolumeOccurrence()
     gallica_records = await volume_Gallica_wrapper.get(
         terms=args.terms,
-        start_date=make_date_from_year_mon_day(args.year, args.month, args.day),
-        end_date=make_date_from_year_mon_day(args.end_year, args.end_month, args.day),
+        start_date=args.start_date,
+        end_date=args.end_date,
         codes=args.codes,
         source=args.source,
         link=link,

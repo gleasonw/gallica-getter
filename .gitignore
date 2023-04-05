@@ -6,6 +6,8 @@ __pycache__/
 .vscode/
 .yaml
 
+.gcloudignore
+
 # C extensions
 *.so
 

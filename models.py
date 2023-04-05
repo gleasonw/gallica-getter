@@ -60,10 +60,8 @@ class UserResponse(BaseModel):
 class ContextSearchArgs(BaseModel):
     terms: List[str]
     codes: Optional[List[str]] = None
-    year: Optional[int] = 0
-    month: Optional[int] = 0
-    end_year: Optional[int] = 0
-    end_month: Optional[int] = 0
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     day: Optional[int] = 0
     cursor: Optional[int] = 0
     limit: Optional[int] = 10
