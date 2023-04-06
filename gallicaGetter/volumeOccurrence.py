@@ -27,6 +27,8 @@ from gallicaGetter.utils.parse_xml import (
 
 from typing import Callable, Generator, List, Literal, Optional, Tuple
 
+from models import OccurrenceArgs
+
 
 @dataclass(frozen=True, slots=True)
 class VolumeRecord:
@@ -84,18 +86,30 @@ class VolumeOccurrence(GallicaWrapper):
     def post_init(self):
         self.on_get_total_records: Optional[Callable[[int], None]] = None
 
+    async def get_custom_query(
+        self,
+        query: VolumeQuery,
+        session: aiohttp.ClientSession,
+        on_get_origin_urls: Optional[Callable[[List[str]], None]] = None,
+    ):
+        base_queries = index_queries_by_num_results([query])
+        if on_get_origin_urls:
+            url = "https://gallica.bnf.fr/SRU?"
+            on_get_origin_urls(
+                [url + urllib.parse.urlencode(query.params) for query in base_queries]
+            )
+        return self.parse(
+            await fetch_queries_concurrently(
+                queries=base_queries,
+                on_receive_response=None,
+                session=session,
+                semaphore=None,
+            )
+        )
+
     async def get(
         self,
-        terms: List[str],
-        source: Optional[Literal["book", "periodical", "all"]] = "all",
-        link: Optional[Tuple[str, int]] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        codes: Optional[List[str]] = None,
-        limit: Optional[int] = None,
-        start_index: int | List[int] = 0,
-        sort: Optional[Literal["date", "relevance"]] = None,
-        query_cache=None,
+        args: OccurrenceArgs,
         on_get_total_records: Optional[Callable[[int], None]] = None,
         on_get_origin_urls: Optional[Callable[[List[str]], None]] = None,
         get_all_results: bool = False,
@@ -109,28 +123,18 @@ class VolumeOccurrence(GallicaWrapper):
                 del local_args["self"]
                 del local_args["session"]
                 return await self.get(**local_args, session=session)
-        if query_cache:
-            queries = index_queries_by_num_results(query_cache)
         else:
             base_queries = build_base_queries(
-                terms=terms,
-                start_date=start_date,
-                end_date=end_date,
-                codes=codes,
-                link=link,
-                source=source,
-                sort=sort,
+                args=args,
                 grouping="all",
-                limit=limit,
-                cursor=start_index,
             )
-            if (limit and limit > 50) or get_all_results:
+            if (args.limit and args.limit > 50) or get_all_results:
                 # assume we want all results, or index for more than 50
                 # we will have to fetch # total records from Gallica
                 queries = await build_indexed_queries(
                     base_queries,
                     session=session,
-                    limit=limit,
+                    limit=args.limit,
                     semaphore=semaphore,
                     on_get_total_records=on_get_total_records,
                 )

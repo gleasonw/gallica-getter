@@ -8,6 +8,8 @@ from gallicaGetter.gallicaWrapper import GallicaWrapper
 from gallicaGetter.utils.base_query_builds import build_base_queries
 from typing import Generator, List, Literal, Optional
 
+from models import OccurrenceArgs
+
 
 @dataclass(slots=True)
 class PeriodRecord:
@@ -33,19 +35,13 @@ class PeriodOccurrence(GallicaWrapper):
 
     async def get(
         self,
-        terms: List[str],
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        codes: Optional[List[str]] = None,
+        args: OccurrenceArgs,
         grouping: Literal["year", "month"] = "year",
         onProgressUpdate=None,
         session: aiohttp.ClientSession | None = None,
     ) -> Generator[PeriodRecord, None, None]:
         queries = build_base_queries(
-            terms=terms,
-            start_date=start_date,
-            end_date=end_date,
-            codes=codes,
+            args=args,
             grouping=grouping,
         )
         return self.parse(

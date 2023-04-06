@@ -7,6 +7,7 @@ from gallicaGetter.papers import Papers
 from gallicaGetter.volumeOccurrence import VolumeOccurrence
 from gallicaGetter.periodOccurrence import PeriodOccurrence
 from gallicaGetter.pageText import PageQuery, PageText
+from models import OccurrenceArgs
 
 
 @pytest.mark.asyncio
@@ -51,7 +52,7 @@ async def test_get_page():
 )
 async def test_get_volume_occurrences(input, expected_length):
     getter = VolumeOccurrence()
-    records = await getter.get(**input, get_all_results=True)
+    records = await getter.get(OccurrenceArgs(**input), get_all_results=True)
     list_records = list(records)
     assert len(list_records) == expected_length
 
@@ -82,7 +83,7 @@ async def test_get_volume_occurrences(input, expected_length):
 )
 async def test_get_period_occurrences(input, expected_length):
     getter = PeriodOccurrence()
-    records = await getter.get(**input)
+    records = await getter.get(OccurrenceArgs(**input), grouping=input["grouping"])
     list_records = list(records)
     assert len(list_records) == expected_length
 

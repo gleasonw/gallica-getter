@@ -1,21 +1,14 @@
 from typing import List, Literal, Optional, Tuple
 from gallicaGetter.utils.date import Date
 from gallicaGetter.queries import VolumeQuery
+from models import OccurrenceArgs
 
 NUM_CODES_PER_BUNDLE = 10
 
 
 def build_base_queries(
-    terms: List[str],
     grouping: Literal["year", "month", "all", "index_selection"],
-    link: Optional[Tuple[str, int]] = None,
-    source: Optional[Literal["book", "periodical", "all"]] = None,
-    sort: Optional[Literal["date", "relevance"]] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    codes: Optional[List[str]] = None,
-    limit: Optional[int] = None,
-    cursor: int | List[int] = 0,
+    args: OccurrenceArgs,
 ) -> List[VolumeQuery]:
     """
     A factory method for VolumeQuery objects.
@@ -24,22 +17,26 @@ def build_base_queries(
     spawn additional indexed queries to fetch all records in batches of 50.
     """
     base_queries = []
-    for start, end in build_date_grouping(start_date, end_date, grouping):
-        for code_bundle in bundle_codes(codes):
-            if type(cursor) is int:
-                cursor = [cursor]
+    link = None
+    if args.link_term and args.link_distance:
+        link = (args.link_term, args.link_distance)
+    for start, end in build_date_grouping(args.start_date, args.end_date, grouping):
+        for code_bundle in bundle_codes(args.codes):
+            if type(args.start_index) is int:
+                cursor = [args.start_index]
             for c in cursor:  # type: ignore
                 base_queries.append(
                     VolumeQuery(
-                        terms=terms,
+                        terms=args.terms,
                         codes=code_bundle,
                         start_date=start,
                         end_date=end,
                         start_index=c,
-                        limit=limit or 1,
+                        limit=args.limit or 1,
                         link=link,
-                        source=source,
-                        sort=sort,
+                        source=args.source,
+                        sort=args.sort,
+                        ocrquality=args.ocrquality,
                     )
                 )
     return base_queries

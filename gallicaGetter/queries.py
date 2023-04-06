@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Literal, Optional, Tuple
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 
 class VolumeQuery(BaseModel):
@@ -16,7 +16,16 @@ class VolumeQuery(BaseModel):
     codes: Optional[List[str]] = None
     sort: Optional[Literal["date", "relevance"]] = None
     gallica_results_for_params: int = 0
-    collapsing = False
+    collapsing: bool = False
+    ocrquality: Optional[float] = None
+
+    @validator("ocrquality")
+    def ocrquality_between_0_100(cls, v):
+        if v is None:
+            return v
+        if v < 0 or v > 100:
+            raise ValueError("ocrquality must be between 0 and 100")
+        return v
 
     @property
     def endpoint_url(self):
@@ -30,23 +39,16 @@ class VolumeQuery(BaseModel):
             "version": 1.2,
             "startRecord": self.start_index,
             "maximumRecords": self.limit,
-            "query": self.build_cql_string(),
             "collapsing": self.collapsing and "true" or "false",
+            "query": self.build_cql_string(),
         }
         return base
 
     def make_copy(self, start_index: int, num_records: int = 1):
-        return VolumeQuery(
-            terms=self.terms,
-            codes=self.codes,
-            start_date=self.start_date,
-            end_date=self.end_date,
-            start_index=start_index,
-            limit=num_records,
-            link=self.link,
-            source=self.source,
-            sort=self.sort,
-        )
+        new = self.copy()
+        new.start_index = start_index
+        new.limit = num_records
+        return new
 
     def build_cql_string(self):
         cql_components = []
@@ -56,6 +58,9 @@ class VolumeQuery(BaseModel):
             cql_components.append(dateCQL)
         if paperCQL := self.build_source_sql():
             cql_components.append(paperCQL)
+        if self.ocrquality:
+            formatted_quality = "{:06.2f}".format(self.ocrquality)
+            cql_components.append(f'ocrquality >= "{formatted_quality}"')
         cql = " and ".join(cql_components)
         if self.sort == "date":
             cql += " sortby dc.date/sort.ascending"
@@ -87,10 +92,7 @@ class VolumeQuery(BaseModel):
             base = 'dc.type all "monographie"'
         else:
             base = 'dc.type all "fascicule" or dc.type all "monographie"'
-        return base + ' and ocr.quality all "Texte disponible"'
-
-    def __repr__(self):
-        return f"Volume Query ({self.terms})"
+        return base
 
 
 @dataclass(slots=True)

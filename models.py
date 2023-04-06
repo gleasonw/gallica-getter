@@ -62,13 +62,17 @@ class ContextSearchArgs(BaseModel):
     codes: Optional[List[str]] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    day: Optional[int] = 0
     cursor: Optional[int] = 0
-    limit: Optional[int] = 10
+    limit: Optional[int] = None
     link_term: Optional[str] = None
-    link_distance: Optional[int] = 0
+    link_distance: Optional[int] = None
     source: Literal["book", "periodical", "all"] = "all"
     sort: Literal["date", "relevance"] = "relevance"
+    ocrquality: Optional[float] = None
+
+
+class OccurrenceArgs(ContextSearchArgs):
+    start_index: int | List[int] = 0
 
 
 class MostFrequentRecord(BaseModel):

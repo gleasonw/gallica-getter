@@ -1,6 +1,9 @@
 from lxml import etree
 from gallicaGetter.utils.date import Date
 from typing import List, Tuple
+import re
+
+# TODO: refactor as a dataclass
 
 
 def get_one_paper_from_record_batch(xml: bytes) -> str:
@@ -48,6 +51,21 @@ def get_num_records_from_gallica_xml(xml: bytes) -> int:
         return int(num_results.text)
     else:
         return 0
+
+
+def get_decollapsing_data_from_gallica_xml(xml: bytes):
+    xml_root = etree.fromstring(xml, parser=etree.XMLParser(encoding="utf-8"))
+    decollapsing_data = xml_root.find("{http://www.loc.gov/zing/srw/}extraResponseData")
+    if decollapsing_data is not None:
+        # extract text from <numberOfRecords> tag
+        content = re.search(
+            r"<numberOfRecordsDecollapser>(\d+)</numberOfRecordsDecollapser>",
+            decollapsing_data.text,
+        )
+        if content is not None:
+            return content.group(1)
+    else:
+        return ""
 
 
 def get_years_published(xml: str) -> List[str]:

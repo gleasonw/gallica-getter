@@ -7,11 +7,20 @@ import uvicorn
 from typing import Any, Callable, Dict, List, Literal, Optional
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
-from gallicaGetter.mostFrequent import get_gallica_core
+from gallicaGetter.fetch import fetch_queries_concurrently, get
 from gallicaGetter.pageText import PageQuery, PageText
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
+from gallicaGetter.queries import VolumeQuery
+from gallicaGetter.utils.index_query_builds import get_num_results_for_queries
+from gallicaGetter.utils.parse_xml import (
+    get_decollapsing_data_from_gallica_xml,
+    get_num_records_from_gallica_xml,
+    get_paper_title_from_record_xml,
+    get_publisher_from_record_xml,
+    get_records_from_xml,
+)
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
 
 from models import (
@@ -20,6 +29,7 @@ from models import (
     GallicaPageContext,
     GallicaRecordFullPageText,
     GallicaRowContext,
+    OccurrenceArgs,
     Paper,
     TopPaper,
     TopPaperResponse,
@@ -27,8 +37,7 @@ from models import (
 )
 
 
-
-MAX_RECORDS = 50000
+MAX_PAPERS_TO_SEARCH = 600
 
 gallica_session: aiohttp.ClientSession
 
@@ -39,6 +48,10 @@ async def gallica_session_lifespan(app: FastAPI):
     gallica_session = aiohttp.ClientSession()
     async with gallica_session:
         yield
+
+
+def session():
+    return gallica_session
 
 
 app = FastAPI(lifespan=gallica_session_lifespan)
@@ -53,11 +66,13 @@ app.add_middleware(
 
 # limit number of requests for routes... top_paper is more intensive
 
-top_paper_semaphore = asyncio.Semaphore(5)
+top_paper_semaphore = asyncio.Semaphore(10)
 context_semaphore = asyncio.Semaphore(20)
+
 
 async def paper_sem():
     return top_paper_semaphore
+
 
 async def context_sem():
     return context_semaphore
@@ -107,72 +122,143 @@ async def page_text(ark: str, page: int):
 
 @app.get("/api/topPapers")
 async def top_papers(
+    request: Request,
     term: List[str] = Query(...),
     date_params: dict = Depends(date_params),
-    semaphore: asyncio.Semaphore = Depends(paper_sem),
     cache: dict = Depends(cache),
+    session: aiohttp.ClientSession = Depends(session),
 ):
-    if cache_val := cache.get((*term, *date_params.values())):
+    if cache_val := cache.get(str(request.query_params)):
         return cache_val
-    volume_wrapper = VolumeOccurrence()
-    top_papers: Dict[str, TopPaper] = {}
-    origin_url = ""
-    total_records = 0
-
-    def handle_get_origin_urls(origin_urls: List[str]):
-        nonlocal origin_url
-        origin_url = origin_urls[0]
-
-    def handle_get_total_records(total: int):
-        nonlocal total_records
-        if total > MAX_RECORDS:
-            total_comma_separated = format(total, ",")
-            max_comma = format(MAX_RECORDS, ",")
-            raise HTTPException(
-                status_code=400,
-                detail=f"Too many records on Gallica for those params ({total_comma_separated}), my current limit is {max_comma}.",
-            )
-        total_records = total
-
     try:
-        volume_generator = await volume_wrapper.get(
+        top_papers: List[TopPaper] = []
+        query = VolumeQuery(
             terms=term,
             start_date=date_params["start_date"],
             end_date=date_params["end_date"],
-            session=gallica_session,
-            semaphore=semaphore,
-            get_all_results=True,
-            on_get_origin_urls=handle_get_origin_urls,
-            on_get_total_records=handle_get_total_records,
+            limit=1,
+            collapsing=True,
+            start_index=0,
+            ocrquality=90,
+            source="periodical",
         )
-        for volume in volume_generator:
-            if volume.paper_title not in top_papers:
-                top_papers[volume.paper_title] = TopPaper(
-                    count=1,
-                    paper=Paper(
-                        code=volume.paper_code,
-                        title=volume.paper_title,
-                        publisher=volume.publisher,
-                    ),
-                )
-            top_papers[volume.paper_title].count += 1
-        top_n_papers = sorted(
-            list(top_papers.values()), key=lambda x: x.count, reverse=True
-        )[:10]
-        response = TopPaperResponse(
-            num_results=total_records,
-            original_query=origin_url,
-            top_papers=top_n_papers,
-        )
-        cache[(*term, *date_params.values())] = response
-        return response
+        num_paper_response = await get(query, session=gallica_session)
+        num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
+        query.gallica_results_for_params = num_papers
+        if num_papers > MAX_PAPERS_TO_SEARCH:
+            return HTTPException(
+                status_code=400,
+                detail=f"Too many newspapers contain this query ({num_papers}). Try narrowing your search.",
+            )
+        num_results = get_decollapsing_data_from_gallica_xml(num_paper_response.text)
+        if num_results and num_results.isdigit():
+            num_results = int(num_results)
+            print(num_papers)
 
-    except aiohttp.client_exceptions.ClientConnectorError:
-        return HTTPException(status_code=503, detail="Could not connect to Gallica.")
+            # Check which counting method results in fewer requests to Gallica
+            if num_papers < (num_results / 50):
+                top_papers = await query_each_paper_for_count(
+                    query=query, semaphore=top_paper_semaphore, **date_params
+                )
+            else:
+                top_papers = await count_paper_for_each_record(
+                    term, semaphore=top_paper_semaphore, **date_params
+                )
+        top_papers.sort(key=lambda x: x.count, reverse=True)
+        top_papers = top_papers[:10]
+        cache[str(request.query_params)] = top_papers
+        return top_papers
+
+    except aiohttp.client_exceptions.ClientConnectorError as e:
+        return HTTPException(status_code=503, detail=e.strerror)
+
+
+async def query_each_paper_for_count(
+    query: VolumeQuery,
+    start_date: str,
+    end_date: str,
+    semaphore: asyncio.Semaphore,
+) -> List[TopPaper]:
+    top_papers: List[TopPaper] = []
+    occurrence_wrapper = VolumeOccurrence()
+    paper_generator = await occurrence_wrapper.get_custom_query(
+        query, session=gallica_session
+    )
+    num_results_in_paper_queries: List[VolumeQuery] = []
+    for volume in paper_generator:
+        num_results_in_paper_queries.append(
+            VolumeQuery(
+                terms=query.terms,
+                start_date=start_date,
+                end_date=end_date,
+                limit=1,
+                collapsing=False,
+                start_index=0,
+                codes=[volume.paper_code],
+            )
+        )
+    for response in await fetch_queries_concurrently(
+        queries=num_results_in_paper_queries,
+        session=gallica_session,
+        semaphore=semaphore,
+    ):
+        num_results = get_num_records_from_gallica_xml(xml=response.text)
+        if num_results > 0:
+            records = get_records_from_xml(response.text)
+            record = records[0]
+            if record is not None:
+                paper = Paper(
+                    code=response.query.codes[0],
+                    title=get_paper_title_from_record_xml(record),
+                    publisher=get_publisher_from_record_xml(record),
+                )
+                top_papers.append(
+                    TopPaper(
+                        paper=paper,
+                        count=num_results,
+                    )
+                )
+    return top_papers
+
+
+async def count_paper_for_each_record(
+    terms: List[str],
+    start_date: str,
+    end_date: str,
+    semaphore: asyncio.Semaphore,
+    cache: dict = Depends(cache),
+) -> List[TopPaper]:
+    volume_wrapper = VolumeOccurrence()
+    top_papers: Dict[str, TopPaper] = {}
+    volume_generator = await volume_wrapper.get(
+        args=OccurrenceArgs(
+            terms=terms,
+            start_date=start_date,
+            end_date=end_date,
+            source="periodical",
+            ocrquality=90,
+        ),
+        session=gallica_session,
+        semaphore=semaphore,
+        get_all_results=True,
+    )
+    for volume in volume_generator:
+        if volume.paper_title not in top_papers:
+            top_papers[volume.paper_title] = TopPaper(
+                count=1,
+                paper=Paper(
+                    code=volume.paper_code,
+                    title=volume.paper_title,
+                    publisher=volume.publisher,
+                ),
+            )
+        top_papers[volume.paper_title].count += 1
+    return list(top_papers.values())
 
 
 @app.get("/api/gallicaRecords")
 async def fetch_records_from_gallica(
+    request: Request,
     terms: List[str] = Query(),
     codes: Optional[List[str]] = Query(None),
     cursor: Optional[int] = 0,
@@ -187,6 +273,7 @@ async def fetch_records_from_gallica(
     all_context: Optional[bool] = False,
     cache: dict = Depends(cache),
     semaphore: asyncio.Semaphore = Depends(context_sem),
+    session: aiohttp.ClientSession = Depends(session),
 ):
     """API endpoint for the context table. To fetch multiple terms linked with OR in the Gallica CQL, pass multiple terms parameters: /api/gallicaRecords?terms=term1&terms=term2&terms=term3"""
 
@@ -202,7 +289,7 @@ async def fetch_records_from_gallica(
         source=source,
         sort=sort,
     )
-    if cache_val := cache.get((args.json(), row_split, include_page_text, all_context)):
+    if cache_val := cache.get(str(request.query_params)):
         return cache_val
 
     if limit and limit > 50:
@@ -229,7 +316,7 @@ async def fetch_records_from_gallica(
                 args=args,
                 on_get_total_records=set_total_records,
                 on_get_origin_urls=set_origin_urls,
-                session=gallica_session,
+                session=session,
                 semaphore=semaphore,
             )
         }
@@ -286,7 +373,7 @@ async def fetch_records_from_gallica(
             num_results=total_records,
             origin_urls=origin_urls,
         )
-        cache[(args.json(), row_split, include_page_text, all_context)] = response
+        cache[str(request.query_params)] = response
         return response
 
     except (
@@ -312,15 +399,18 @@ async def get_documents_with_occurrences(
     # get the volumes in which the term appears
     volume_Gallica_wrapper = VolumeOccurrence()
     gallica_records = await volume_Gallica_wrapper.get(
-        terms=args.terms,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        codes=args.codes,
-        source=args.source,
-        link=link,
-        limit=args.limit,
-        start_index=args.cursor or 0,
-        sort=args.sort,
+        args=OccurrenceArgs(
+            terms=args.terms,
+            start_date=args.start_date,
+            end_date=args.end_date,
+            codes=args.codes,
+            source=args.source,
+            link_distance=args.link_distance,
+            link_term=args.link_term,
+            limit=args.limit,
+            start_index=args.cursor or 0,
+            sort=args.sort,
+        ),
         on_get_total_records=on_get_total_records,
         on_get_origin_urls=on_get_origin_urls,
         session=session,
@@ -385,6 +475,8 @@ async def get_context_include_full_page(
     ):
         record = keyed_docs[context_response.ark]
         for page in context_response.pages:
+            if(page.page_num is None):
+                continue
             queries.append(
                 PageQuery(
                     ark=record.ark,
