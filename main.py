@@ -78,13 +78,6 @@ async def context_sem():
     return context_semaphore
 
 
-# this cache will be wiped on every GCP sleep, but helpful in the short term
-simple_cache = {}
-
-
-async def cache():
-    return simple_cache
-
 
 async def date_params(
     year: Optional[int] = 0,
@@ -125,11 +118,8 @@ async def top_papers(
     request: Request,
     term: List[str] = Query(...),
     date_params: dict = Depends(date_params),
-    cache: dict = Depends(cache),
     session: aiohttp.ClientSession = Depends(session),
 ):
-    if cache_val := cache.get(str(request.query_params)):
-        return cache_val
     try:
         top_papers: List[TopPaper] = []
         query = VolumeQuery(
@@ -166,7 +156,6 @@ async def top_papers(
                 )
         top_papers.sort(key=lambda x: x.count, reverse=True)
         top_papers = top_papers[:10]
-        cache[str(request.query_params)] = top_papers
         return top_papers
 
     except aiohttp.client_exceptions.ClientConnectorError as e:
@@ -226,7 +215,6 @@ async def count_paper_for_each_record(
     start_date: str,
     end_date: str,
     semaphore: asyncio.Semaphore,
-    cache: dict = Depends(cache),
 ) -> List[TopPaper]:
     volume_wrapper = VolumeOccurrence()
     top_papers: Dict[str, TopPaper] = {}
@@ -271,7 +259,6 @@ async def fetch_records_from_gallica(
     row_split: Optional[bool] = False,
     include_page_text: Optional[bool] = False,
     all_context: Optional[bool] = False,
-    cache: dict = Depends(cache),
     semaphore: asyncio.Semaphore = Depends(context_sem),
     session: aiohttp.ClientSession = Depends(session),
 ):
@@ -289,8 +276,6 @@ async def fetch_records_from_gallica(
         source=source,
         sort=sort,
     )
-    if cache_val := cache.get(str(request.query_params)):
-        return cache_val
 
     if limit and limit > 50:
         raise HTTPException(
@@ -373,7 +358,6 @@ async def fetch_records_from_gallica(
             num_results=total_records,
             origin_urls=origin_urls,
         )
-        cache[str(request.query_params)] = response
         return response
 
     except (
