@@ -66,7 +66,7 @@ app.add_middleware(
 
 # limit number of requests for routes... top_paper is more intensive
 
-top_paper_semaphore = asyncio.Semaphore(10)
+top_paper_semaphore = asyncio.Semaphore(5)
 context_semaphore = asyncio.Semaphore(20)
 
 
