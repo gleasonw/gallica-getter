@@ -23,11 +23,11 @@ async def fetch_queries_concurrently(
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     # constants
     queries = (query for query in queries)
-    seconds_to_pause_after_rate_limit_error = 5
+    seconds_to_pause_after_rate_limit_error = 15
     seconds_to_sleep_each_loop = (
         0.001  # 1 ms limits max throughput to 1,000 requests per second
     )
-    esimated_rate_limit = 1500
+    esimated_rate_limit = 1200
 
     # initialize trackers
     queue_of_requests_to_retry = asyncio.Queue()
@@ -183,27 +183,24 @@ class APIRequest:
         elapsed_time = None
         try:
             start_time = time.time()
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    self.query.endpoint_url, params=self.query.params
-                ) as response:
-                    print("fetched index", self.query.params["startRecord"])
-                    elapsed_time = time.time() - start_time
-                    response_bytes = await response.content.read()
-                    if response.status != 200:
-                        print(
-                            f"Request {self.task_id} failed with error {response_bytes}"
+            async with self.session.get(
+                self.query.endpoint_url, params=self.query.params
+            ) as response:
+                print("fetched index", self.query.params["startRecord"])
+                elapsed_time = time.time() - start_time
+                response_bytes = await response.content.read()
+                if response.status != 200:
+                    print(f"Request {self.task_id} failed with error {response_bytes}")
+                    status_tracker.num_api_errors += 1
+                    error = response
+                    if response.status == 429:
+                        status_tracker.time_of_last_rate_limit_error = time.time()
+                        status_tracker.num_rate_limit_errors += 1
+                        status_tracker.num_api_errors -= (
+                            1  # rate limit errors are counted separately
                         )
-                        status_tracker.num_api_errors += 1
-                        error = response
-                        if response.status == 429:
-                            status_tracker.time_of_last_rate_limit_error = time.time()
-                            status_tracker.num_rate_limit_errors += 1
-                            status_tracker.num_api_errors -= (
-                                1  # rate limit errors are counted separately
-                            )
-                    else:
-                        self.on_success()
+                else:
+                    self.on_success()
 
         except (
             Exception
