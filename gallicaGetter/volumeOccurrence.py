@@ -66,22 +66,24 @@ class VolumeOccurrence(GallicaWrapper):
         gallica_responses: List[Response],
     ):
         for response in gallica_responses:
-            for i, record in enumerate(get_records_from_xml(response.text)):
-                if i == 0 and self.on_get_total_records:
-                    self.on_get_total_records(
-                        get_num_records_from_gallica_xml(response.text)
+            response = response.result()
+            if response is not None:
+                for i, record in enumerate(get_records_from_xml(response.text)):
+                    if i == 0 and self.on_get_total_records:
+                        self.on_get_total_records(
+                            get_num_records_from_gallica_xml(response.text)
+                        )
+                    assert isinstance(response.query, VolumeQuery)
+                    yield VolumeRecord(
+                        paper_title=get_paper_title_from_record_xml(record),
+                        paper_code=get_paper_code_from_record_xml(record),
+                        date=get_date_from_record_xml(record),
+                        url=get_url_from_record(record),
+                        author=get_author_from_record_xml(record),
+                        publisher=get_publisher_from_record_xml(record),
+                        ocr_quality=float(get_ocr_quality_from_record_xml(record)),
+                        terms=response.query.terms,
                     )
-                assert isinstance(response.query, VolumeQuery)
-                yield VolumeRecord(
-                    paper_title=get_paper_title_from_record_xml(record),
-                    paper_code=get_paper_code_from_record_xml(record),
-                    date=get_date_from_record_xml(record),
-                    url=get_url_from_record(record),
-                    author=get_author_from_record_xml(record),
-                    publisher=get_publisher_from_record_xml(record),
-                    ocr_quality=float(get_ocr_quality_from_record_xml(record)),
-                    terms=response.query.terms,
-                )
 
     def post_init(self):
         self.on_get_total_records: Optional[Callable[[int], None]] = None
@@ -101,9 +103,7 @@ class VolumeOccurrence(GallicaWrapper):
         return self.parse(
             await fetch_queries_concurrently(
                 queries=base_queries,
-                on_receive_response=None,
                 session=session,
-                semaphore=None,
             )
         )
 
@@ -150,10 +150,5 @@ class VolumeOccurrence(GallicaWrapper):
                 [url + urllib.parse.urlencode(query.params) for query in queries]
             )
         return self.parse(
-            await fetch_queries_concurrently(
-                queries=queries,
-                on_receive_response=on_receive_response,
-                session=session,
-                semaphore=semaphore,
-            )
+            await fetch_queries_concurrently(queries=queries, session=session)
         )

@@ -7,7 +7,7 @@ import uvicorn
 from typing import Any, Callable, Dict, List, Literal, Optional
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
-from gallicaGetter.fetch import fetch_queries_concurrently, get
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.pageText import PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +15,6 @@ import aiohttp
 from gallicaGetter.queries import VolumeQuery
 from gallicaGetter.utils.index_query_builds import get_num_results_for_queries
 from gallicaGetter.utils.parse_xml import (
-    get_decollapsing_data_from_gallica_xml,
     get_num_records_from_gallica_xml,
     get_paper_title_from_record_xml,
     get_publisher_from_record_xml,
@@ -112,53 +111,53 @@ async def page_text(ark: str, page: int):
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
-@app.get("/api/topPapers")
-async def top_papers(
-    request: Request,
-    term: List[str] = Query(...),
-    date_params: dict = Depends(date_params),
-    session: aiohttp.ClientSession = Depends(session),
-):
-    try:
-        top_papers: List[TopPaper] = []
-        query = VolumeQuery(
-            terms=term,
-            start_date=date_params["start_date"],
-            end_date=date_params["end_date"],
-            limit=1,
-            collapsing=True,
-            start_index=0,
-            ocrquality=90,
-            source="periodical",
-        )
-        num_paper_response = await get(query, session=gallica_session)
-        num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
-        query.gallica_results_for_params = num_papers
-        if num_papers > MAX_PAPERS_TO_SEARCH:
-            return HTTPException(
-                status_code=400,
-                detail=f"Too many newspapers contain this query ({num_papers}). Try narrowing your search.",
-            )
-        num_results = get_decollapsing_data_from_gallica_xml(num_paper_response.text)
-        if num_results and num_results.isdigit():
-            num_results = int(num_results)
-            print(num_papers)
+# @app.get("/api/topPapers")
+# async def top_papers(
+#     request: Request,
+#     term: List[str] = Query(...),
+#     date_params: dict = Depends(date_params),
+#     session: aiohttp.ClientSession = Depends(session),
+# ):
+#     try:
+#         top_papers: List[TopPaper] = []
+#         query = VolumeQuery(
+#             terms=term,
+#             start_date=date_params["start_date"],
+#             end_date=date_params["end_date"],
+#             limit=1,
+#             collapsing=True,
+#             start_index=0,
+#             ocrquality=90,
+#             source="periodical",
+#         )
+#         num_paper_response = await get(query, session=gallica_session)
+#         num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
+#         query.gallica_results_for_params = num_papers
+#         if num_papers > MAX_PAPERS_TO_SEARCH:
+#             return HTTPException(
+#                 status_code=400,
+#                 detail=f"Too many newspapers contain this query ({num_papers}). Try narrowing your search.",
+#             )
+#         num_results = get_decollapsing_data_from_gallica_xml(num_paper_response.text)
+#         if num_results and num_results.isdigit():
+#             num_results = int(num_results)
+#             print(num_papers)
 
-            # Check which counting method results in fewer requests to Gallica
-            if num_papers < (num_results / 50):
-                top_papers = await query_each_paper_for_count(
-                    query=query, semaphore=top_paper_semaphore, **date_params
-                )
-            else:
-                top_papers = await count_paper_for_each_record(
-                    term, semaphore=top_paper_semaphore, **date_params
-                )
-        top_papers.sort(key=lambda x: x.count, reverse=True)
-        top_papers = top_papers[:10]
-        return top_papers
+#             # Check which counting method results in fewer requests to Gallica
+#             if num_papers < (num_results / 50):
+#                 top_papers = await query_each_paper_for_count(
+#                     query=query, semaphore=top_paper_semaphore, **date_params
+#                 )
+#             else:
+#                 top_papers = await count_paper_for_each_record(
+#                     term, semaphore=top_paper_semaphore, **date_params
+#                 )
+#         top_papers.sort(key=lambda x: x.count, reverse=True)
+#         top_papers = top_papers[:10]
+#         return top_papers
 
-    except aiohttp.client_exceptions.ClientConnectorError as e:
-        return HTTPException(status_code=503, detail=e.strerror)
+#     except aiohttp.client_exceptions.ClientConnectorError as e:
+#         return HTTPException(status_code=503, detail=e.strerror)
 
 
 async def query_each_paper_for_count(
@@ -625,4 +624,19 @@ def make_date_from_year_mon_day(
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    # uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+
+    async def test():
+        volume_wrapper = VolumeOccurrence()
+        async with aiohttp.ClientSession() as session:
+            records = await volume_wrapper.get(
+                args=OccurrenceArgs(
+                    terms=["brazza"],
+                ),
+                session=session,
+                get_all_results=True,
+            )
+            records = list(records)
+            print(f"Found {len(records)} records.")
+
+    asyncio.run(test())

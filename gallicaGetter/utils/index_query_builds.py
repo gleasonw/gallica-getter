@@ -37,9 +37,10 @@ async def get_num_results_for_queries(
     session: aiohttp.ClientSession,
     semaphore: Optional[asyncio.Semaphore] = None,
 ) -> List[PaperQuery] | List[VolumeQuery]:
-    responses = await fetch_queries_concurrently(queries, session, semaphore)
+    responses = await fetch_queries_concurrently(queries, session)
     queries_with_num_results_state = []
     for response in responses:
+        response = response.result()
         assert response.query is type(VolumeQuery) or type(PaperQuery)
         response.query.gallica_results_for_params = get_num_records_from_gallica_xml(
             response.text
