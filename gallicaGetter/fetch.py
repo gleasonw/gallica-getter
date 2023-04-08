@@ -21,13 +21,12 @@ async def fetch_queries_concurrently(
     max_attempts: int = 3,
 ):
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
-    # constants
     queries = (query for query in queries)
     seconds_to_pause_after_rate_limit_error = 15
     seconds_to_sleep_each_loop = (
         0.001  # 1 ms limits max throughput to 1,000 requests per second
     )
-    esimated_rate_limit = 1200
+    esimated_rate_limit = 1000
 
     # initialize trackers
     queue_of_requests_to_retry = asyncio.Queue()
@@ -130,17 +129,6 @@ async def fetch_queries_concurrently(
                 f"Pausing to cool down until {time.ctime(status_tracker.time_of_last_rate_limit_error + seconds_to_pause_after_rate_limit_error)}"
             )
 
-    # after finishing, log final status
-    logging.info(f"""Parallel processing complete.""")
-    if status_tracker.num_tasks_failed > 0:
-        logging.warning(
-            f"{status_tracker.num_tasks_failed} / {status_tracker.num_tasks_started} requests failed."
-        )
-    if status_tracker.num_rate_limit_errors > 0:
-        logging.warning(
-            f"{status_tracker.num_rate_limit_errors} rate limit errors received. Consider running at a lower rate."
-        )
-
 
 # dataclasses
 
@@ -186,7 +174,6 @@ class APIRequest:
             async with self.session.get(
                 self.query.endpoint_url, params=self.query.params
             ) as response:
-                print("fetched index", self.query.params["startRecord"])
                 elapsed_time = time.time() - start_time
                 response_bytes = await response.content.read()
                 if response.status != 200:
