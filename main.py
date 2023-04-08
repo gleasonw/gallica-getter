@@ -78,7 +78,6 @@ async def context_sem():
     return context_semaphore
 
 
-
 async def date_params(
     year: Optional[int] = 0,
     month: Optional[int] = 0,
@@ -459,7 +458,7 @@ async def get_context_include_full_page(
     ):
         record = keyed_docs[context_response.ark]
         for page in context_response.pages:
-            if(page.page_num is None):
+            if page.page_num is None:
                 continue
             queries.append(
                 PageQuery(
