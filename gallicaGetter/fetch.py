@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass
-import logging
+import random
 import time
 from typing import Any, Callable
 import aiohttp
@@ -22,7 +22,7 @@ async def fetch_queries_concurrently(
 ):
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     queries = (query for query in queries)
-    seconds_to_pause_after_rate_limit_error = 20
+    seconds_to_pause_after_rate_limit_error = random.randint(10, 20)
     seconds_to_sleep_each_loop = (
         0.001  # 1 ms limits max throughput to 1,000 requests per second
     )
@@ -43,7 +43,6 @@ async def fetch_queries_concurrently(
     tasks = []
 
     more_queries_to_send = True
-    print(f"Initialization complete.")
 
     def increase_rpm():
         nonlocal max_requests_per_minute
@@ -55,9 +54,6 @@ async def fetch_queries_concurrently(
         if next_gallica_request is None:
             if not queue_of_requests_to_retry.empty():
                 next_gallica_request = queue_of_requests_to_retry.get_nowait()
-                print(
-                    f"Retrying request {next_gallica_request.task_id}: {next_gallica_request}"
-                )
             elif more_queries_to_send:
                 try:
                     # get new request
@@ -72,7 +68,6 @@ async def fetch_queries_concurrently(
                     status_tracker.num_tasks_started += 1
                     status_tracker.num_tasks_in_progress += 1
                 except StopIteration:
-                    print("Queries exhausted")
                     more_queries_to_send = False
 
         # update available capacity
@@ -176,7 +171,6 @@ class APIRequest:
             ) as response:
                 elapsed_time = time.time() - start_time
                 response_bytes = await response.content.read()
-                print(self.query.params["startRecord"])
                 if response.status != 200:
                     status_tracker.num_api_errors += 1
                     error = response

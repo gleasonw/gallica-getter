@@ -101,67 +101,77 @@ async def page_text(ark: str, page: int):
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
+top_paper_lock = asyncio.Lock()
+
+
+def get_lock():
+    return top_paper_lock
+
+
 @app.get("/api/topPapers")
 async def top_papers(
-    request: Request,
     term: List[str] = Query(...),
     date_params: dict = Depends(date_params),
+    lock: asyncio.Lock = Depends(get_lock),
     session: aiohttp.ClientSession = Depends(session),
 ):
-    try:
-        top_papers: List[TopPaper] = []
-        query = VolumeQuery(
-            terms=term,
-            start_date=date_params["start_date"],
-            end_date=date_params["end_date"],
-            limit=1,
-            collapsing=True,
-            start_index=0,
-            ocrquality=90,
-            source="periodical",
-        )
-        num_paper_response = await APIRequest(
-            query=query,
-            session=gallica_session,
-            task_id=0,
-            attempts_left=3,
-            on_success=lambda: None,
-        ).call_gallica(asyncio.Queue(), StatusTracker())
-        if num_paper_response is not None:
-            num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
-            query.gallica_results_for_params = num_papers
-            num_results = get_decollapsing_data_from_gallica_xml(
-                num_paper_response.text
+    # have to lock this route because it's the most intensive on Gallica's servers...
+    async with lock:
+        try:
+            top_papers: List[TopPaper] = []
+            query = VolumeQuery(
+                terms=term,
+                start_date=date_params["start_date"],
+                end_date=date_params["end_date"],
+                limit=1,
+                collapsing=True,
+                start_index=0,
+                ocrquality=90,
+                source="periodical",
             )
-            if num_results and num_results.isdigit():
-                num_results = int(num_results)
-                print(num_papers)
+            num_paper_response = await APIRequest(
+                query=query,
+                session=gallica_session,
+                task_id=0,
+                attempts_left=3,
+                on_success=lambda: None,
+            ).call_gallica(asyncio.Queue(), StatusTracker())
+            if num_paper_response is not None:
+                num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
+                query.gallica_results_for_params = num_papers
+                num_results = get_decollapsing_data_from_gallica_xml(
+                    num_paper_response.text
+                )
+                if num_results and num_results.isdigit():
+                    num_results = int(num_results)
+                    print(num_papers)
 
-                # Check which counting method results in fewer requests to Gallica
-                if num_papers < (num_results / 50):
-                    top_papers = await query_each_paper_for_count(
-                        query=query, **date_params
-                    )
-                else:
-                    top_papers = await count_paper_for_each_record(term, **date_params)
-        top_papers.sort(key=lambda x: x.count, reverse=True)
-        top_papers = top_papers[:10]
-        return top_papers
+                    # Check which counting method results in fewer requests to Gallica
+                    if num_papers < (num_results / 50):
+                        top_papers = await query_each_paper_for_count(
+                            query=query, session=session, **date_params
+                        )
+                    else:
+                        top_papers = await count_paper_for_each_record(
+                            term, session=session, **date_params
+                        )
+            top_papers.sort(key=lambda x: x.count, reverse=True)
+            top_papers = top_papers[:10]
+            return top_papers
 
-    except aiohttp.client_exceptions.ClientConnectorError as e:
-        return HTTPException(status_code=503, detail=e.strerror)
+        except aiohttp.client_exceptions.ClientConnectorError as e:
+            return HTTPException(status_code=503, detail=e.strerror)
 
 
 async def query_each_paper_for_count(
     query: VolumeQuery,
     start_date: str,
     end_date: str,
+    session: aiohttp.ClientSession,
 ) -> List[TopPaper]:
     top_papers: List[TopPaper] = []
     occurrence_wrapper = VolumeOccurrence()
-    paper_generator = await occurrence_wrapper.get_custom_query(
-        query, session=gallica_session
-    )
+    paper_generator = await occurrence_wrapper.get_custom_query(query, session=session)
     num_results_in_paper_queries: List[VolumeQuery] = []
     for volume in paper_generator:
         num_results_in_paper_queries.append(
@@ -177,7 +187,7 @@ async def query_each_paper_for_count(
         )
     for response in await fetch_queries_concurrently(
         queries=num_results_in_paper_queries,
-        session=gallica_session,
+        session=session,
     ):
         num_results = get_num_records_from_gallica_xml(xml=response.text)
         if num_results > 0:
@@ -202,6 +212,7 @@ async def count_paper_for_each_record(
     terms: List[str],
     start_date: str,
     end_date: str,
+    session: aiohttp.ClientSession,
 ) -> List[TopPaper]:
     volume_wrapper = VolumeOccurrence()
     top_papers: Dict[str, TopPaper] = {}
@@ -213,7 +224,7 @@ async def count_paper_for_each_record(
             source="periodical",
             ocrquality=90,
         ),
-        session=gallica_session,
+        session=session,
         get_all_results=True,
     )
     for volume in volume_generator:
