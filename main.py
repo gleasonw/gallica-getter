@@ -607,19 +607,5 @@ def make_date_from_year_mon_day(
 
 
 if __name__ == "__main__":
-    # uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
 
-    async def test():
-        volume_wrapper = VolumeOccurrence()
-        async with aiohttp.ClientSession() as session:
-            records = await volume_wrapper.get(
-                args=OccurrenceArgs(
-                    terms=["malamine"],
-                ),
-                session=session,
-                get_all_results=True,
-            )
-            records = list(records)
-            print(f"Found {len(records)} records.")
-
-    asyncio.run(test())
