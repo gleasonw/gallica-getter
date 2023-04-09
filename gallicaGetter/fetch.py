@@ -17,16 +17,16 @@ class Response:
 async def fetch_queries_concurrently(
     queries,
     session: aiohttp.ClientSession,
-    max_requests_per_minute: float = 10,
+    initial_rpm: float = 10,
     max_attempts: int = 3,
 ):
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     queries = (query for query in queries)
-    seconds_to_pause_after_rate_limit_error = random.randint(10, 20)
+    seconds_to_pause_after_rate_limit_error = random.randint(20, 30)
     seconds_to_sleep_each_loop = (
         0.001  # 1 ms limits max throughput to 1,000 requests per second
     )
-    estimated_rate_limit = 1500
+    estimated_max_rpm = 2000
 
     # initialize trackers
     queue_of_requests_to_retry = asyncio.Queue()
@@ -38,15 +38,15 @@ async def fetch_queries_concurrently(
     next_gallica_request = None  # variable to hold the next request to call
 
     # initialize available capacity counts
-    available_request_capacity = max_requests_per_minute
+    available_request_capacity = initial_rpm
     last_update_time = time.time()
     tasks = []
 
     more_queries_to_send = True
 
-    def increase_rpm():
-        nonlocal max_requests_per_minute
-        max_requests_per_minute = estimated_rate_limit
+    def set_rpm_to_max():
+        nonlocal initial_rpm
+        initial_rpm = estimated_max_rpm
 
     start = time.time()
     while True:
@@ -63,7 +63,7 @@ async def fetch_queries_concurrently(
                         query=query,
                         attempts_left=max_attempts,
                         session=session,
-                        on_success=increase_rpm,
+                        on_success=set_rpm_to_max,
                     )
                     status_tracker.num_tasks_started += 1
                     status_tracker.num_tasks_in_progress += 1
@@ -75,8 +75,8 @@ async def fetch_queries_concurrently(
         seconds_since_update = current_time - last_update_time
         available_request_capacity = min(
             available_request_capacity
-            + max_requests_per_minute * seconds_since_update / 60.0,
-            max_requests_per_minute,
+            + initial_rpm * seconds_since_update / 60.0,
+            initial_rpm,
         )
         last_update_time = current_time
 
@@ -116,8 +116,8 @@ async def fetch_queries_concurrently(
                 seconds_to_pause_after_rate_limit_error - seconds_since_rate_limit_error
             )
             print("remaining_seconds_to_pause: ", remaining_seconds_to_pause)
-            estimated_rate_limit *= 0.9
-            max_requests_per_minute = 10
+            estimated_max_rpm *= 0.9
+            initial_rpm = 10
             await asyncio.sleep(remaining_seconds_to_pause)
             # ^e.g., if pause is 15 seconds and final limit was hit 5 seconds ago
             print(
