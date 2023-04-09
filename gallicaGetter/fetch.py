@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 import time
-from typing import Any, AsyncGenerator, Callable, Generator, List
+from typing import Any, Callable
 import aiohttp
 import aiohttp.client_exceptions
 
@@ -17,16 +17,16 @@ class Response:
 async def fetch_queries_concurrently(
     queries,
     session: aiohttp.ClientSession,
-    max_requests_per_minute: float = 30,
+    max_requests_per_minute: float = 10,
     max_attempts: int = 3,
 ):
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     queries = (query for query in queries)
-    seconds_to_pause_after_rate_limit_error = 15
+    seconds_to_pause_after_rate_limit_error = 20
     seconds_to_sleep_each_loop = (
         0.001  # 1 ms limits max throughput to 1,000 requests per second
     )
-    esimated_rate_limit = 1000
+    estimated_rate_limit = 1500
 
     # initialize trackers
     queue_of_requests_to_retry = asyncio.Queue()
@@ -47,11 +47,9 @@ async def fetch_queries_concurrently(
 
     def increase_rpm():
         nonlocal max_requests_per_minute
-        if max_requests_per_minute > esimated_rate_limit:
-            return
-        print(esimated_rate_limit)
-        max_requests_per_minute += 10
+        max_requests_per_minute = estimated_rate_limit
 
+    start = time.time()
     while True:
         # get next request (if one is not already waiting for capacity)
         if next_gallica_request is None:
@@ -107,7 +105,9 @@ async def fetch_queries_concurrently(
 
         # if all tasks are finished, break
         if status_tracker.num_tasks_in_progress == 0:
-            return tasks
+            print(f"Finished all tasks in {time.time() - start} seconds")
+            print(status_tracker)
+            return (task.result() for task in tasks)
 
         # main loop sleeps briefly so concurrent tasks can run
         await asyncio.sleep(seconds_to_sleep_each_loop)
@@ -121,7 +121,7 @@ async def fetch_queries_concurrently(
                 seconds_to_pause_after_rate_limit_error - seconds_since_rate_limit_error
             )
             print("remaining_seconds_to_pause: ", remaining_seconds_to_pause)
-            esimated_rate_limit *= 0.9
+            estimated_rate_limit *= 0.9
             max_requests_per_minute = 10
             await asyncio.sleep(remaining_seconds_to_pause)
             # ^e.g., if pause is 15 seconds and final limit was hit 5 seconds ago
@@ -176,8 +176,8 @@ class APIRequest:
             ) as response:
                 elapsed_time = time.time() - start_time
                 response_bytes = await response.content.read()
+                print(self.query.params["startRecord"])
                 if response.status != 200:
-                    print(f"Request {self.task_id} failed with error {response_bytes}")
                     status_tracker.num_api_errors += 1
                     error = response
                     if response.status == 429:
@@ -192,7 +192,6 @@ class APIRequest:
         except (
             Exception
         ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
-            print(f"Request {self.task_id} failed with Exception {e}")
             if type(e) == aiohttp.client_exceptions.ClientConnectorError:
                 status_tracker.time_of_last_rate_limit_error = time.time()
                 status_tracker.num_rate_limit_errors += 1

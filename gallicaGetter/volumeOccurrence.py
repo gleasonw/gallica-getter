@@ -66,7 +66,6 @@ class VolumeOccurrence(GallicaWrapper):
         gallica_responses: List[Response],
     ):
         for response in gallica_responses:
-            response = response.result()
             if response is not None:
                 for i, record in enumerate(get_records_from_xml(response.text)):
                     if i == 0 and self.on_get_total_records:
@@ -113,9 +112,7 @@ class VolumeOccurrence(GallicaWrapper):
         on_get_total_records: Optional[Callable[[int], None]] = None,
         on_get_origin_urls: Optional[Callable[[List[str]], None]] = None,
         get_all_results: bool = False,
-        on_receive_response: Optional[Callable[[Response], None]] = None,
         session: aiohttp.ClientSession | None = None,
-        semaphore: asyncio.Semaphore | None = None,
     ) -> Generator[VolumeRecord, None, None]:
         if session is None:
             async with aiohttp.ClientSession() as session:
@@ -135,7 +132,6 @@ class VolumeOccurrence(GallicaWrapper):
                     base_queries,
                     session=session,
                     limit=args.limit,
-                    semaphore=semaphore,
                     on_get_total_records=on_get_total_records,
                 )
             else:

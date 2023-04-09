@@ -19,9 +19,10 @@ class Issues(GallicaWrapper):
 
     def parse(self, gallica_responses):
         for response in gallica_responses:
-            years = get_years_published(response.text)
-            code = response.query.code
-            yield IssueYearRecord(code=code, years=years)
+            if response is not None:
+                years = get_years_published(response.text)
+                code = response.query.code
+                yield IssueYearRecord(code=code, years=years)
 
     async def get(
         self, codes, session: aiohttp.ClientSession | None = None

@@ -83,12 +83,10 @@ class PageText(GallicaWrapper):
         self,
         page_queries: List[PageQuery],
         session: aiohttp.ClientSession | None = None,
-        semaphore: asyncio.Semaphore | None = None,
     ) -> Generator[ConvertedXMLPage, None, None]:
         return self.parse(
             await fetch_queries_concurrently(
                 queries=page_queries,
                 session=session,
-                semaphore=semaphore,
             )
         )

@@ -42,9 +42,7 @@ class Context(GallicaWrapper):
     async def get(
         self,
         context_pairs: List[Tuple[str, List[str]]],
-        on_receive_response: Callable[[Response], None] | None = None,
-        session: aiohttp.ClientSession | None = None,
-        semaphore: asyncio.Semaphore | None = None,
+        session: aiohttp.ClientSession,
     ) -> Generator[HTMLContext, None, None]:
         queries: List[ContentQuery] = []
         for pair in context_pairs:
@@ -64,7 +62,5 @@ class Context(GallicaWrapper):
             await fetch_queries_concurrently(
                 queries=queries,
                 session=session,
-                semaphore=semaphore,
-                on_receive_response=on_receive_response,
             )
         )

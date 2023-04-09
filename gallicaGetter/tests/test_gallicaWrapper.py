@@ -1,3 +1,4 @@
+import aiohttp
 import pytest
 from gallicaGetter.pagination import Pagination
 from gallicaGetter.context import Context
@@ -13,13 +14,14 @@ from models import OccurrenceArgs
 @pytest.mark.asyncio
 async def test_pagination():
     getter = Pagination()
-    records = await getter.get("bpt6k607811b")
-    list_records = list(records)
-    first = list_records[0]
-    assert first.ark == "bpt6k607811b"
-    assert first.page_count == 4
-    assert first.has_content == True
-    assert first.has_toc == False
+    async with aiohttp.ClientSession() as session:
+        records = await getter.get("bpt6k607811b", session=session)
+        list_records = list(records)
+        first = list_records[0]
+        assert first.ark == "bpt6k607811b"
+        assert first.page_count == 4
+        assert first.has_content == True
+        assert first.has_toc == False
 
 
 @pytest.mark.asyncio
@@ -101,10 +103,11 @@ async def test_get_issues():
 @pytest.mark.asyncio
 async def test_get_content():
     getter = Context()
-    records = await getter.get([("bpt6k267221f", ["erratum"])])
-    list_records = list(records)
-    context = list_records[0]
-    assert context.ark == "bpt6k267221f"
+    async with aiohttp.ClientSession() as session:
+        records = await getter.get([("bpt6k267221f", ["erratum"])], session=session)
+        list_records = list(records)
+        context = list_records[0]
+        assert context.ark == "bpt6k267221f"
 
 
 @pytest.mark.asyncio

@@ -11,7 +11,6 @@ from gallicaGetter.queries import PaperQuery
 async def build_indexed_queries(
     queries: List[VolumeQuery] | List[PaperQuery],
     session: aiohttp.ClientSession,
-    semaphore: Optional[asyncio.Semaphore] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
     on_get_total_records: Optional[Callable[[int], None]] = None,
@@ -23,7 +22,7 @@ async def build_indexed_queries(
             queries_with_num_results.append(new_query)
     else:
         queries_with_num_results = await get_num_results_for_queries(
-            queries, session, semaphore
+            queries, session
         )
     if on_get_total_records:
         on_get_total_records(sum(query.gallica_results_for_params for query in queries))
@@ -35,12 +34,10 @@ async def build_indexed_queries(
 async def get_num_results_for_queries(
     queries: List[VolumeQuery] | List[PaperQuery],
     session: aiohttp.ClientSession,
-    semaphore: Optional[asyncio.Semaphore] = None,
 ) -> List[PaperQuery] | List[VolumeQuery]:
     responses = await fetch_queries_concurrently(queries, session)
     queries_with_num_results_state = []
     for response in responses:
-        response = response.result()
         assert response.query is type(VolumeQuery) or type(PaperQuery)
         response.query.gallica_results_for_params = get_num_records_from_gallica_xml(
             response.text

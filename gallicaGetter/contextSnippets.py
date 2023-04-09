@@ -76,9 +76,7 @@ class ContextSnippets(GallicaWrapper):
     async def get(
         self,
         context_pairs: List[Tuple[str, str]],
-        on_receive_response: Callable[[Response], None] | None = None,
         session: aiohttp.ClientSession | None = None,
-        semaphore: asyncio.Semaphore | None = None,
     ) -> Generator[ExtractRoot, None, None]:
         queries: List[ContextSnippetQuery] = []
         for pair in context_pairs:
@@ -90,7 +88,5 @@ class ContextSnippets(GallicaWrapper):
             await fetch_queries_concurrently(
                 queries=queries,
                 session=session,
-                semaphore=semaphore,
-                on_receive_response=on_receive_response,
             )
         )

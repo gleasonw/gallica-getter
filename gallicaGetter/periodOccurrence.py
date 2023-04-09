@@ -45,9 +45,7 @@ class PeriodOccurrence(GallicaWrapper):
             grouping=grouping,
         )
         return self.parse(
-            await fetch_queries_concurrently(
-                queries=queries, on_receive_response=onProgressUpdate, session=session
-            )
+            await fetch_queries_concurrently(queries=queries, session=session)
         )
 
     def parse(self, gallica_responses):

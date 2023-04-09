@@ -34,9 +34,7 @@ class PaginationData(BaseModel):
 class Pagination(GallicaWrapper):
     """Wraps Gallica's Pagination API."""
 
-    def parse(self, gallica_responses: List[Response]):
-        if not gallica_responses or len(gallica_responses) != 1:
-            return []
+    def parse(self, gallica_responses):
         response = gallica_responses[0]
         try:
             elements = etree.fromstring(
@@ -59,14 +57,12 @@ class Pagination(GallicaWrapper):
     async def get(
         self,
         ark: str,
-        session: aiohttp.ClientSession | None = None,
-        semaphore: asyncio.Semaphore | None = None,
+        session: aiohttp.ClientSession,
     ) -> Generator[PaginationData, None, None]:
         query = PaginationQuery(ark=ark)
         return self.parse(
             await fetch_queries_concurrently(
                 queries=[query],
                 session=session,
-                semaphore=semaphore,
             )
         )
