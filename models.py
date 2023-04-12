@@ -24,6 +24,13 @@ class ContextRow(BaseModel):
     left_context: str
     right_context: str
     page_url: Optional[str | None] = None
+    page_num: Optional[int | None] = None
+
+
+class OCRPage(BaseModel):
+    page_num: int
+    text: str
+    page_url: str
 
 
 class GallicaRecordBase(BaseModel):
@@ -46,7 +53,7 @@ class GallicaPageContext(GallicaRecordBase):
 
 
 class GallicaRecordFullPageText(GallicaRecordBase):
-    context: List[Dict[str, str | int]]
+    context: List[OCRPage]
 
 
 class UserResponse(BaseModel):

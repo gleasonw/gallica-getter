@@ -15,7 +15,9 @@ class GallicaPage(BaseModel):
 
     @property
     def page_num(self):
-        return self.page_label.split("_")[-1]
+        if page_num := self.page_label.split("_")[-1]:
+            if page_num.isdigit():
+                return int(page_num)
 
 
 class HTMLContext(BaseModel):

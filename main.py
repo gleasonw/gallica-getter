@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
+from pydantic import BaseModel
 import uvicorn
 from typing import Any, Callable, Dict, List, Literal, Optional
 from gallicaGetter.context import Context, HTMLContext
@@ -29,6 +30,7 @@ from models import (
     GallicaPageContext,
     GallicaRecordFullPageText,
     GallicaRowContext,
+    OCRPage,
     OccurrenceArgs,
     Paper,
     TopPaper,
@@ -241,9 +243,112 @@ async def count_paper_for_each_record(
     return list(top_papers.values())
 
 
+@app.get("/api/customWindowGallicaRecords")
+async def fetch_context_with_custom_window(
+    terms: List[str] = Query(...),
+    codes: Optional[List[str]] = Query(None),
+    cursor: Optional[int] = 0,
+    date_params: dict = Depends(date_params),
+    limit: Optional[int] = 10,
+    link_term: Optional[str] = None,
+    link_distance: Optional[int] = 0,
+    source: Literal["book", "periodical", "all"] = "all",
+    sort: Literal["date", "relevance"] = "relevance",
+    session: aiohttp.ClientSession = Depends(session),
+    window_size: int = 100,
+):
+    args = ContextSearchArgs(**locals())
+    total_records = 0
+    origin_urls = []
+
+    def set_total_records(num_records: int):
+        nonlocal total_records
+        total_records = num_records
+
+    def set_origin_urls(urls: List[str]):
+        nonlocal origin_urls
+        origin_urls = urls
+
+    keyed_docs = {
+        record.ark: record
+        for record in await get_documents_with_occurrences(
+            args=args,
+            on_get_total_records=set_total_records,
+            on_get_origin_urls=set_origin_urls,
+            session=session,
+        )
+    }
+
+    records = [
+        record
+        async for record in get_sample_context_by_row(
+            session=session,
+            keyed_docs=keyed_docs,
+        )
+    ]
+
+    page_queries: List[PageQuery] = []
+    for record in records:
+        page_and_grams: Dict[int, set] = {}
+        for context in record.context:
+            if context.page_num is None:
+                continue
+            if context.page_num not in page_and_grams:
+                page_and_grams[context.page_num] = set()
+            page_and_grams[context.page_num].add(context.pivot)
+        for page_num, grams in page_and_grams.items():
+            page_queries.append(
+                PageQuery(ark=record.ark, page_num=page_num, grams_within=grams)
+            )
+
+    page_wrapper = PageText()
+    page_generator = await page_wrapper.get(
+        page_queries=page_queries,
+        session=session,
+    )
+    documents: Dict[str, GallicaRowContext] = {}
+    for page in page_generator:
+        if page.grams_within is None:
+            continue
+        record = keyed_docs[page.ark]
+        if page.ark not in documents:
+            documents[page.ark] = GallicaRowContext(
+                **record.dict(),
+                context=[],
+            )
+        doc_response = documents[page.ark]
+        for gram in page.grams_within:
+            current_index = 0
+            gram_len = len(gram)
+            while current_index >= 0:
+                current_index = page.text.find(gram, current_index)
+                if current_index >= 0:
+                    doc_response.context.append(
+                        ContextRow(
+                            pivot=page.text[current_index : current_index + gram_len],
+                            left_context=page.text[
+                                max(0, current_index - window_size) : current_index
+                            ],
+                            right_context=page.text[
+                                current_index
+                                + gram_len : current_index
+                                + gram_len
+                                + window_size
+                            ],
+                            page_num=page.page_num,
+                            page_url=f"https://gallica.bnf.fr/ark:/12148/{record.ark}/f{page.page_num}.image.r={gram}",
+                        )
+                    )
+                    current_index += gram_len
+    return UserResponse(
+        records=list(documents.values()),
+        num_results=total_records,
+        origin_urls=origin_urls,
+    )
+
+
 @app.get("/api/gallicaRecords")
 async def fetch_records_from_gallica(
-    request: Request,
     terms: List[str] = Query(),
     codes: Optional[List[str]] = Query(None),
     cursor: Optional[int] = 0,
@@ -325,14 +430,7 @@ async def fetch_records_from_gallica(
                 )
             ]
         elif row_split:
-            records = [
-                record
-                async for record in get_context_parse_by_row(
-                    **props,
-                    context_source=get_sample_context_in_documents,
-                    row_splitter=build_row_record_from_extract,
-                )
-            ]
+            records = [record async for record in get_sample_context_by_row(**props)]
         elif all_context:
             records = [
                 record
@@ -347,12 +445,11 @@ async def fetch_records_from_gallica(
                     **props, context_source=get_sample_context_in_documents
                 )
             ]
-        response = UserResponse(
+        return UserResponse(
             records=records,
             num_results=total_records,
             origin_urls=origin_urls,
         )
-        return response
 
     except (
         aiohttp.client_exceptions.ClientConnectorError,
@@ -394,6 +491,18 @@ async def get_documents_with_occurrences(
     )
 
     return list(gallica_records)
+
+
+def get_sample_context_by_row(
+    keyed_docs: Dict[str, VolumeRecord],
+    session: aiohttp.ClientSession,
+):
+    return get_context_parse_by_row(
+        session=session,
+        keyed_docs=keyed_docs,
+        context_source=get_sample_context_in_documents,
+        row_splitter=parse_rows_from_sample_context,
+    )
 
 
 async def get_context_parse_by_row(
@@ -460,11 +569,11 @@ async def get_context_include_full_page(
         terms_string = " ".join(record.terms)
 
         record.context.append(
-            {
-                "page_num": occurrence_page.page_num,
-                "text": occurrence_page.text,
-                "page_url": f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
-            }
+            OCRPage(
+                page_num=occurrence_page.page_num,
+                text=occurrence_page.text,
+                page_url=f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
+            )
         )
     return list(gallica_records.values())
 
@@ -540,10 +649,11 @@ def build_row_record_from_ContentSearch_response(
             )
             for row in page_rows:
                 row.page_url = f"{record.url}/f{page.page_num}.image.r={row.pivot}"
+                row.page_num = page.page_num
                 yield row
 
 
-def build_row_record_from_extract(record: VolumeRecord, extract: ExtractRoot):
+def parse_rows_from_sample_context(record: VolumeRecord, extract: ExtractRoot):
     """Split the Gallica HTML context on the highlighted spans, creating rows of pivot (span), left context, and right context."""
     # last element is a label, not a context extract
     snippets = extract.fragment.contenu[:-1]
@@ -556,6 +666,7 @@ def build_row_record_from_extract(record: VolumeRecord, extract: ExtractRoot):
             page_rows = parse_spans_to_rows(spans, record)
             for row in page_rows:
                 row.page_url = snippet.value.url
+                row.page_num = snippet.value.page_num
                 yield row
 
 
@@ -608,4 +719,3 @@ def make_date_from_year_mon_day(
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
-
