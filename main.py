@@ -146,10 +146,10 @@ async def top_papers(
                 )
                 if num_results and num_results.isdigit():
                     num_results = int(num_results)
-                    if num_results > 100000:
+                    if num_results > 50000:
                         raise HTTPException(
                             status_code=400,
-                            detail=f"Too many results for a full scan ({num_results}). Current limit is 100000. Please narrow your search.",
+                            detail=f"Too many results for a full scan ({num_results}). Current limit is 50000. Please narrow your search.",
                         )
                     # Check which counting method results in fewer requests to Gallica
                     if num_papers < (num_results / 50):

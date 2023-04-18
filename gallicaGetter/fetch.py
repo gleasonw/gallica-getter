@@ -26,7 +26,7 @@ async def fetch_queries_concurrently(
     seconds_to_sleep_each_loop = (
         0.001  # 1 ms limits max throughput to 1,000 requests per second
     )
-    estimated_max_rpm = 1000
+    estimated_max_rpm = 500
 
     # initialize trackers
     queue_of_requests_to_retry = asyncio.Queue()

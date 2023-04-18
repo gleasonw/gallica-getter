@@ -63,7 +63,7 @@ class VolumeQuery(BaseModel):
             formatted_quality = "{:06.2f}".format(self.ocrquality)
             cql_components.append(f'ocrquality >= "{formatted_quality}"')
         if self.language != "all":
-            cql_components.append(f'dc.language all "{self.language}"')
+            cql_components.append(f'dc.language all {self.language}')
         cql = " and ".join(cql_components)
         if self.sort == "date":
             cql += " sortby dc.date/sort.ascending"
@@ -81,7 +81,7 @@ class VolumeQuery(BaseModel):
         if self.link and len(self.terms) == 1:
             return f'text adj "{self.terms[0]}" prox/unit=word/distance={self.link[1]} "{self.link[0]}"'
         elif self.terms:
-            return 'text adj "' + '" or text adj "'.join(self.terms) + '"'
+            return '(text adj "' + '" or text adj "'.join(self.terms) + ')"'
         else:
             return ""
 
