@@ -34,7 +34,6 @@ from models import (
     OccurrenceArgs,
     Paper,
     TopPaper,
-    TopPaperResponse,
     UserResponse,
 )
 
@@ -130,6 +129,7 @@ async def top_papers(
                 start_index=0,
                 ocrquality=90,
                 source="periodical",
+                language="fre",
             )
             num_paper_response = await APIRequest(
                 query=query,
@@ -146,16 +146,21 @@ async def top_papers(
                 )
                 if num_results and num_results.isdigit():
                     num_results = int(num_results)
-                    print(num_papers)
-
+                    if num_results > 100000:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Too many results for a full scan ({num_results}). Current limit is 100000. Please narrow your search.",
+                        )
                     # Check which counting method results in fewer requests to Gallica
                     if num_papers < (num_results / 50):
                         top_papers = await query_each_paper_for_count(
                             query=query, session=session, **date_params
                         )
                     else:
+                        query.collapsing = False
+                        query.gallica_results_for_params = num_results
                         top_papers = await count_paper_for_each_record(
-                            term, session=session, **date_params
+                            query=query, session=session
                         )
             top_papers.sort(key=lambda x: x.count, reverse=True)
             top_papers = top_papers[:10]
@@ -211,24 +216,12 @@ async def query_each_paper_for_count(
 
 
 async def count_paper_for_each_record(
-    terms: List[str],
-    start_date: str,
-    end_date: str,
+    query: VolumeQuery,
     session: aiohttp.ClientSession,
 ) -> List[TopPaper]:
     volume_wrapper = VolumeOccurrence()
     top_papers: Dict[str, TopPaper] = {}
-    volume_generator = await volume_wrapper.get(
-        args=OccurrenceArgs(
-            terms=terms,
-            start_date=start_date,
-            end_date=end_date,
-            source="periodical",
-            ocrquality=90,
-        ),
-        session=session,
-        get_all_results=True,
-    )
+    volume_generator = await volume_wrapper.get_custom_query(query, session=session)
     for volume in volume_generator:
         if volume.paper_title not in top_papers:
             top_papers[volume.paper_title] = TopPaper(

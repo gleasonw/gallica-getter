@@ -13,6 +13,7 @@ class VolumeQuery(BaseModel):
     limit: int
     link: Optional[Tuple[str, int]] = None
     source: Optional[Literal["book", "periodical", "all"]] = "all"
+    language: Optional[Literal["fre", "all"]] = "all"
     codes: Optional[List[str]] = None
     sort: Optional[Literal["date", "relevance"]] = None
     gallica_results_for_params: int = 0
@@ -61,6 +62,8 @@ class VolumeQuery(BaseModel):
         if self.ocrquality:
             formatted_quality = "{:06.2f}".format(self.ocrquality)
             cql_components.append(f'ocrquality >= "{formatted_quality}"')
+        if self.language != "all":
+            cql_components.append(f'dc.language all "{self.language}"')
         cql = " and ".join(cql_components)
         if self.sort == "date":
             cql += " sortby dc.date/sort.ascending"

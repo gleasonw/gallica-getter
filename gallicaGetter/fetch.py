@@ -22,11 +22,11 @@ async def fetch_queries_concurrently(
 ):
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     queries = (query for query in queries)
-    seconds_to_pause_after_rate_limit_error = random.randint(20, 30)
+    seconds_to_pause_after_rate_limit_error = random.randint(20, 25)
     seconds_to_sleep_each_loop = (
         0.001  # 1 ms limits max throughput to 1,000 requests per second
     )
-    estimated_max_rpm = 2000
+    estimated_max_rpm = 1000
 
     # initialize trackers
     queue_of_requests_to_retry = asyncio.Queue()
