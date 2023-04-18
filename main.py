@@ -5,7 +5,7 @@ import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 from pydantic import BaseModel
 import uvicorn
-from typing import Any, Callable, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.fetch import APIRequest, StatusTracker, fetch_queries_concurrently
@@ -33,6 +33,7 @@ from models import (
     OCRPage,
     OccurrenceArgs,
     Paper,
+    TopCity,
     TopPaper,
     UserResponse,
 )
@@ -109,6 +110,77 @@ def get_lock():
     return top_paper_lock
 
 
+@app.get("/api/topCities")
+async def top_cities(
+    term: List[str] = Query(...),
+    date_params: dict = Depends(date_params),
+    lock: asyncio.Lock = Depends(get_lock),
+    session: aiohttp.ClientSession = Depends(session),
+):
+    async with lock:
+        try:
+            num_results, num_papers, query = await get_results_and_num_papers(
+                terms=term,
+                start_date=date_params["start_date"],
+                end_date=date_params["end_date"],
+                session=session,
+            )
+            if num_results > 50000 and num_papers > 1000:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Too many results for a full scan ({num_results}). Current limit is 50000. Please narrow your search.",
+                )
+            # Check which counting method results in fewer requests to Gallica
+            if num_papers < (num_results / 50):
+                top_cities = await sum_cities_by_paper(
+                    query=query, session=session, **date_params
+                )
+            else:
+                query.collapsing = False
+                query.gallica_results_for_params = num_results
+                top_cities = await sum_cities_by_record(query=query, session=session)
+            top_ten = list(top_cities.items())
+            top_ten = sorted(top_ten, key=lambda x: x[1], reverse=True)[:10]
+            return [TopCity(city=city, count=count) for city, count in top_ten]
+
+        except aiohttp.client_exceptions.ClientConnectorError:
+            raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
+
+
+async def get_results_and_num_papers(
+    terms: List[str], start_date: str, end_date: str, session: aiohttp.ClientSession
+):
+    num_papers = 0
+    num_results = 0
+    query = VolumeQuery(
+        terms=terms,
+        start_date=start_date,
+        end_date=end_date,
+        limit=1,
+        collapsing=True,
+        start_index=0,
+        ocrquality=90,
+        source="periodical",
+        language="fre",
+    )
+    num_paper_response = await APIRequest(
+        query=query,
+        session=gallica_session,
+        task_id=0,
+        attempts_left=3,
+        on_success=lambda: None,
+    ).call_gallica_once()
+    if num_paper_response is not None:
+        num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
+        query.gallica_results_for_params = num_papers
+        total_records_extra = get_decollapsing_data_from_gallica_xml(
+            num_paper_response.text
+        )
+        if total_records_extra and total_records_extra.isdigit():
+            num_results = int(total_records_extra)
+    return num_results, num_papers, query
+
+
 @app.get("/api/topPapers")
 async def top_papers(
     term: List[str] = Query(...),
@@ -120,54 +192,72 @@ async def top_papers(
     async with lock:
         try:
             top_papers: List[TopPaper] = []
-            query = VolumeQuery(
+            num_results, num_papers, query = await get_results_and_num_papers(
                 terms=term,
                 start_date=date_params["start_date"],
                 end_date=date_params["end_date"],
-                limit=1,
-                collapsing=True,
-                start_index=0,
-                ocrquality=90,
-                source="periodical",
-                language="fre",
+                session=session,
             )
-            num_paper_response = await APIRequest(
-                query=query,
-                session=gallica_session,
-                task_id=0,
-                attempts_left=3,
-                on_success=lambda: None,
-            ).call_gallica_once()
-            if num_paper_response is not None:
-                num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
-                query.gallica_results_for_params = num_papers
-                num_results = get_decollapsing_data_from_gallica_xml(
-                    num_paper_response.text
+            if num_results > 50000 and num_papers > 1000:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Too many results for a full scan ({num_results}). Current limit is 50000. Please narrow your search.",
                 )
-                if num_results and num_results.isdigit():
-                    num_results = int(num_results)
-                    if num_results > 50000:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=f"Too many results for a full scan ({num_results}). Current limit is 50000. Please narrow your search.",
-                        )
-                    # Check which counting method results in fewer requests to Gallica
-                    if num_papers < (num_results / 50):
-                        top_papers = await query_each_paper_for_count(
-                            query=query, session=session, **date_params
-                        )
-                    else:
-                        query.collapsing = False
-                        query.gallica_results_for_params = num_results
-                        top_papers = await count_paper_for_each_record(
-                            query=query, session=session
-                        )
+            # Check which counting method results in fewer requests to Gallica
+            if num_papers < (num_results / 50):
+                top_papers = await query_each_paper_for_count(
+                    query=query, session=session, **date_params
+                )
+            else:
+                query.collapsing = False
+                query.gallica_results_for_params = num_results
+                top_papers = await count_paper_for_each_record(
+                    query=query, session=session
+                )
             top_papers.sort(key=lambda x: x.count, reverse=True)
             top_papers = top_papers[:10]
             return top_papers
 
         except aiohttp.client_exceptions.ClientConnectorError as e:
             return HTTPException(status_code=503, detail=e.strerror)
+
+
+async def sum_cities_by_paper(
+    query: VolumeQuery,
+    start_date: str,
+    end_date: str,
+    session: aiohttp.ClientSession,
+):
+    city_counts: Dict[str, int] = {}
+    occurrence_wrapper = VolumeOccurrence()
+    paper_generator = await occurrence_wrapper.get_custom_query(query, session=session)
+    num_results_in_paper_queries: List[VolumeQuery] = []
+    for volume in paper_generator:
+        num_results_in_paper_queries.append(
+            VolumeQuery(
+                terms=query.terms,
+                start_date=start_date,
+                end_date=end_date,
+                limit=1,
+                collapsing=False,
+                start_index=0,
+                codes=[volume.paper_code],
+            )
+        )
+    for response in await fetch_queries_concurrently(
+        queries=num_results_in_paper_queries,
+        session=session,
+    ):
+        num_results = get_num_records_from_gallica_xml(xml=response.text)
+        if num_results > 0:
+            records = get_records_from_xml(response.text)
+            record = records[0]
+            if record is not None:
+                record_publisher = get_publisher_from_record_xml(record)
+                if record_publisher not in city_counts:
+                    city_counts[record_publisher] = 0
+                city_counts[record_publisher] += num_results
+    return city_counts
 
 
 async def query_each_paper_for_count(
@@ -213,6 +303,21 @@ async def query_each_paper_for_count(
                     )
                 )
     return top_papers
+
+
+async def sum_cities_by_record(
+    query: VolumeQuery,
+    session: aiohttp.ClientSession,
+):
+    city_counts: Dict[str, int] = {}
+    occurrence_wrapper = VolumeOccurrence()
+    volume_generator = await occurrence_wrapper.get_custom_query(query, session=session)
+    for volume in volume_generator:
+        if volume.publisher:
+            if volume.publisher not in city_counts:
+                city_counts[volume.publisher] = 0
+            city_counts[volume.publisher] += 1
+    return city_counts
 
 
 async def count_paper_for_each_record(

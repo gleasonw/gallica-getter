@@ -8,6 +8,11 @@ class Paper(BaseModel):
     publisher: Optional[str]
 
 
+class TopCity(BaseModel):
+    count: int
+    city: str
+
+
 class TopPaper(BaseModel):
     count: int
     paper: Paper

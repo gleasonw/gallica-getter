@@ -81,7 +81,7 @@ class VolumeQuery(BaseModel):
         if self.link and len(self.terms) == 1:
             return f'text adj "{self.terms[0]}" prox/unit=word/distance={self.link[1]} "{self.link[0]}"'
         elif self.terms:
-            return '(text adj "' + '" or text adj "'.join(self.terms) + ')"'
+            return '(text adj "' + '" or text adj "'.join(self.terms) + '")'
         else:
             return ""
 
