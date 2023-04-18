@@ -137,7 +137,7 @@ async def top_papers(
                 task_id=0,
                 attempts_left=3,
                 on_success=lambda: None,
-            ).call_gallica(asyncio.Queue(), StatusTracker())
+            ).call_gallica_once()
             if num_paper_response is not None:
                 num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
                 query.gallica_results_for_params = num_papers

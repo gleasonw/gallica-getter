@@ -74,8 +74,7 @@ async def fetch_queries_concurrently(
         current_time = time.time()
         seconds_since_update = current_time - last_update_time
         available_request_capacity = min(
-            available_request_capacity
-            + initial_rpm * seconds_since_update / 60.0,
+            available_request_capacity + initial_rpm * seconds_since_update / 60.0,
             initial_rpm,
         )
         last_update_time = current_time
@@ -154,6 +153,12 @@ class APIRequest:
     attempts_left: int
     result = []
     on_success: Callable
+
+    async def call_gallica_once(self):
+        return await self.call_gallica(
+            retry_queue=asyncio.Queue(),
+            status_tracker=StatusTracker(),
+        )
 
     async def call_gallica(
         self,
