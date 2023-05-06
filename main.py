@@ -732,10 +732,4 @@ def make_date_from_year_mon_day(
 
 
 if __name__ == "__main__":
-    from gallicaGetter.tests.test_gallicaWrapper import test_get_page
-
-    async def test():
-        await test_get_page()
-
-    asyncio.run(test())
-    # uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
