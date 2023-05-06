@@ -74,8 +74,8 @@ async def date_params(
     end_month: Optional[int] = 0,
 ):
     return {
-        "start_date": make_date_from_year_mon_day(year=year, month=month, day=1),
-        "end_date": make_date_from_year_mon_day(year=end_year, month=end_month, day=1),
+        "start_date": make_date_from_year_mon_day(year=year, month=month),
+        "end_date": make_date_from_year_mon_day(year=end_year, month=end_month),
     }
 
 
@@ -717,7 +717,7 @@ async def get_sample_context_in_documents(
 
 
 def make_date_from_year_mon_day(
-    year: Optional[int], month: Optional[int], day: Optional[int]
+    year: Optional[int], month: Optional[int], day: Optional[int] | None
 ) -> str:
     if year and month and day:
         return f"{year}-{month}-{day}"
