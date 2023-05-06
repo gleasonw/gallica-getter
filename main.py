@@ -717,7 +717,7 @@ async def get_sample_context_in_documents(
 
 
 def make_date_from_year_mon_day(
-    year: Optional[int], month: Optional[int], day: Optional[int] | None
+    year: Optional[int], month: Optional[int], day: Optional[int] | None=None  
 ) -> str:
     if year and month and day:
         return f"{year}-{month}-{day}"
