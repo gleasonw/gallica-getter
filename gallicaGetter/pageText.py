@@ -36,7 +36,7 @@ class PageText(GallicaWrapper):
     """Wrapper for Gallica's RequestDigitalElement API, Gallica originally returns OCR in XML format for a document page. This class parses the XML to plain text for eventual JSON formatting."""
 
     def parse(
-        self, gallica_responses: List[Response]
+        self, gallica_responses: Generator[Response, None, None]
     ) -> Generator[ConvertedXMLPage, None, None]:
         for response in gallica_responses:
             if response is not None:
@@ -86,7 +86,7 @@ class PageText(GallicaWrapper):
     async def get(
         self,
         page_queries: List[PageQuery],
-        session: aiohttp.ClientSession | None = None,
+        session: aiohttp.ClientSession,
     ) -> Generator[ConvertedXMLPage, None, None]:
         return self.parse(
             await fetch_queries_concurrently(

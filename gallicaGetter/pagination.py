@@ -35,7 +35,7 @@ class Pagination(GallicaWrapper):
     """Wraps Gallica's Pagination API."""
 
     def parse(self, gallica_responses):
-        response = gallica_responses[0]
+        response = list(gallica_responses)[0]
         try:
             elements = etree.fromstring(
                 response.text, parser=etree.XMLParser(encoding="utf-8")

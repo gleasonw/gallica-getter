@@ -1,7 +1,7 @@
 from typing import Generator, List
 
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
+from gallicaGetter.fetch import Response, fetch_queries_concurrently
 from gallicaGetter.queries import IssuesQuery
 from gallicaGetter.utils.parse_xml import get_years_published
 from gallicaGetter.gallicaWrapper import GallicaWrapper
@@ -17,7 +17,7 @@ class IssueYearRecord:
 class Issues(GallicaWrapper):
     """Fetches periodical periodical publishing years from Gallica's Issues API. Used in PapersWrapper."""
 
-    def parse(self, gallica_responses):
+    def parse(self, gallica_responses: Generator[Response, None, None]):
         for response in gallica_responses:
             if response is not None:
                 years = get_years_published(response.text)
@@ -25,7 +25,7 @@ class Issues(GallicaWrapper):
                 yield IssueYearRecord(code=code, years=years)
 
     async def get(
-        self, codes, session: aiohttp.ClientSession | None = None
+        self, codes, session: aiohttp.ClientSession
     ) -> Generator[IssueYearRecord, None, None]:
         if type(codes) == str:
             codes = [codes]

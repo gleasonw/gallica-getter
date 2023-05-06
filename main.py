@@ -226,7 +226,9 @@ async def sum_by_paper_query(
                     city_counts[record_publisher] = 0
                 city_counts[record_publisher] += num_results
 
-    return top_papers, [TopCity(city=city, count=count) for city, count in city_counts.items()]
+    return top_papers, [
+        TopCity(city=city, count=count) for city, count in city_counts.items()
+    ]
 
 
 async def sum_by_record(
@@ -717,7 +719,7 @@ async def get_sample_context_in_documents(
 
 
 def make_date_from_year_mon_day(
-    year: Optional[int], month: Optional[int], day: Optional[int] | None=None  
+    year: Optional[int], month: Optional[int], day: Optional[int] | None = None
 ) -> str:
     if year and month and day:
         return f"{year}-{month}-{day}"
@@ -730,4 +732,10 @@ def make_date_from_year_mon_day(
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    from gallicaGetter.tests.test_gallicaWrapper import test_get_page
+
+    async def test():
+        await test_get_page()
+
+    asyncio.run(test())
+    # uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

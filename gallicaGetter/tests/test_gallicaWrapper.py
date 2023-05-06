@@ -27,13 +27,16 @@ async def test_pagination():
 @pytest.mark.asyncio
 async def test_get_page():
     getter = PageText()
-    records = await getter.get(page_queries=[PageQuery(ark="bpt6k607811b", page_num=1)])
-    list_records = list(records)
-    assert len(list_records) == 1
-    first_record = list_records[0]
-    assert first_record.ark == "bpt6k607811b"
-    assert first_record.page_num == 1
-    assert type(first_record.text) == str
+    async with aiohttp.ClientSession() as session:
+        records = await getter.get(
+            page_queries=[PageQuery(ark="bpt6k607811b", page_num=1)], session=session
+        )
+        list_records = list(records)
+        assert len(list_records) == 1
+        first_record = list_records[0]
+        assert first_record.ark == "bpt6k607811b"
+        assert first_record.page_num == 1
+        assert type(first_record.text) == str
 
 
 @pytest.mark.asyncio
@@ -85,19 +88,23 @@ async def test_get_volume_occurrences(input, expected_length):
 )
 async def test_get_period_occurrences(input, expected_length):
     getter = PeriodOccurrence()
-    records = await getter.get(OccurrenceArgs(**input), grouping=input["grouping"])
-    list_records = list(records)
-    assert len(list_records) == expected_length
+    async with aiohttp.ClientSession() as session:
+        records = await getter.get(
+            OccurrenceArgs(**input), grouping=input["grouping"], session=session
+        )
+        list_records = list(records)
+        assert len(list_records) == expected_length
 
 
 @pytest.mark.asyncio
 async def test_get_issues():
     getter = Issues()
-    records = await getter.get("cb344484501")
-    list_records = list(records)
-    assert len(list_records) == 1
-    issue = list_records[0]
-    assert issue.code == "cb344484501"
+    async with aiohttp.ClientSession() as session:
+        records = await getter.get("cb344484501", session=session)
+        list_records = list(records)
+        assert len(list_records) == 1
+        issue = list_records[0]
+        assert issue.code == "cb344484501"
 
 
 @pytest.mark.asyncio

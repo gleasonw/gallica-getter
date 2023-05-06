@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
+from gallicaGetter.fetch import Response, fetch_queries_concurrently
 from gallicaGetter.utils.date import Date
 from gallicaGetter.utils.parse_xml import get_num_records_from_gallica_xml
 from gallicaGetter.gallicaWrapper import GallicaWrapper
@@ -36,9 +36,9 @@ class PeriodOccurrence(GallicaWrapper):
     async def get(
         self,
         args: OccurrenceArgs,
+        session: aiohttp.ClientSession,
         grouping: Literal["year", "month"] = "year",
         onProgressUpdate=None,
-        session: aiohttp.ClientSession | None = None,
     ) -> Generator[PeriodRecord, None, None]:
         queries = build_base_queries(
             args=args,
@@ -48,7 +48,7 @@ class PeriodOccurrence(GallicaWrapper):
             await fetch_queries_concurrently(queries=queries, session=session)
         )
 
-    def parse(self, gallica_responses):
+    def parse(self, gallica_responses: Generator[Response, None, None]):
         for response in gallica_responses:
             count = get_num_records_from_gallica_xml(response.text)
             query = response.query
