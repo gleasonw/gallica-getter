@@ -113,5 +113,5 @@ def makeMonthGroupings(startDate: Date, endDate: Date):
 def getOneMonthInterval(month, year):
     month, year = int(month), int(year)
     if month == 12:
-        return [(f"{year}-{month:02}-02", f"{year + 1}-01-01")]
-    return [(f"{year}-{month:02}-02", f"{year}-{month + 1:02}-01")]
+        return [(f"{year}-{month:02}-01", f"{year + 1}-01-01")]
+    return [(f"{year}-{month:02}-01", f"{year}-{month + 1:02}-01")]
