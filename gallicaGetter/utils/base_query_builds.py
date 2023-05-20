@@ -64,8 +64,8 @@ def build_date_grouping(
     groupings = {
         "all": make_wide_groupings_for_all_search,
         "index_selection": make_wide_groupings_for_all_search,
-        "year": makeYearGroupings,
-        "month": makeMonthGroupings,
+        "year": make_year_groupings,
+        "month": make_month_groupings,
     }
     return groupings[grouping](start_date, end_date)
 
@@ -76,7 +76,7 @@ def make_wide_groupings_for_all_search(startDate: Date, endDate: Date):
         if markerDate.day:
             return [(str(markerDate), None)]
         if month := markerDate.month:
-            return getOneMonthInterval(month, markerDate.year)
+            return get_one_month_interval(int(month), int(markerDate.year))
         if not markerDate.year:
             return [(None, None)]
         return [(f"{markerDate.year}-01-01", f"{int(markerDate.year) + 1}-01-01")]
@@ -86,7 +86,7 @@ def make_wide_groupings_for_all_search(startDate: Date, endDate: Date):
         return [(start, end)]
 
 
-def makeYearGroupings(startDate: Date, endDate: Date):
+def make_year_groupings(startDate: Date, endDate: Date):
     if not startDate.year or not endDate.year:
         markerDate = startDate if startDate.year else endDate
         return [(f"{markerDate.year}-01-01", f"{int(markerDate.year) + 1}-01-01")]
@@ -96,10 +96,10 @@ def makeYearGroupings(startDate: Date, endDate: Date):
     ]
 
 
-def makeMonthGroupings(startDate: Date, endDate: Date):
+def make_month_groupings(startDate: Date, endDate: Date):
     if not startDate.year or not endDate.year:
         markerDate = startDate if startDate.year else endDate
-        return getOneMonthInterval(markerDate.month, markerDate.year)
+        return get_one_month_interval(int(markerDate.month), int(markerDate.year))
     monthGroups = set()
     for year in range(int(startDate.year), int(endDate.year) + 1):
         for month in range(1, 13):
@@ -110,8 +110,9 @@ def makeMonthGroupings(startDate: Date, endDate: Date):
     return monthGroups
 
 
-def getOneMonthInterval(month, year):
-    month, year = int(month), int(year)
+def get_one_month_interval(month: int, year: int):
+    if month == 1:
+        return [(f"{year}-{month:02}-02", f"{year}-{month + 1:02}-01")]
     if month == 12:
         return [(f"{year}-{month:02}-01", f"{year + 1}-01-01")]
     return [(f"{year}-{month:02}-01", f"{year}-{month + 1:02}-01")]
