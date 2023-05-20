@@ -104,9 +104,9 @@ def makeMonthGroupings(startDate: Date, endDate: Date):
     for year in range(int(startDate.year), int(endDate.year) + 1):
         for month in range(1, 13):
             if month == 12:
-                monthGroups.add((f"{year}-{month:02}-02", f"{year + 1}-01-01"))
+                monthGroups.add((f"{year}-{month:02}-01", f"{year + 1}-01-01"))
             else:
-                monthGroups.add((f"{year}-{month:02}-02", f"{year}-{month + 1:02}-01"))
+                monthGroups.add((f"{year}-{month:02}-01", f"{year}-{month + 1:02}-01"))
     return monthGroups
 
 
