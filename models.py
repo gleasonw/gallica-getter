@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Literal
+from gallicaGetter.context import HTMLContext
+
+from gallicaGetter.contextSnippets import ExtractRoot
 
 
 class Paper(BaseModel):
@@ -54,7 +57,7 @@ class GallicaRowContext(GallicaRecordBase):
 
 
 class GallicaPageContext(GallicaRecordBase):
-    context: List[str]
+    context: HTMLContext | ExtractRoot
 
 
 class GallicaRecordFullPageText(GallicaRecordBase):

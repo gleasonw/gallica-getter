@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 import random
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 import aiohttp
 import aiohttp.client_exceptions
 
@@ -13,12 +13,27 @@ class Response:
     query: Any
     elapsed_time: float
 
+async def post_queries_concurrently(
+    queries,
+    session: aiohttp.ClientSession,
+    initial_rpm: float = 10,
+    max_attempts: int = 3,
+): 
+    return await fetch_queries_concurrently(
+        queries=queries,
+        session=session,
+        initial_rpm=initial_rpm,
+        max_attempts=max_attempts,
+        http_method='post',
+    )
+
 
 async def fetch_queries_concurrently(
     queries,
     session: aiohttp.ClientSession,
     initial_rpm: float = 10,
     max_attempts: int = 3,
+    http_method: Literal['post', 'get'] = 'get',
 ):
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     queries = (query for query in queries)
@@ -64,6 +79,7 @@ async def fetch_queries_concurrently(
                         attempts_left=max_attempts,
                         session=session,
                         on_success=set_rpm_to_max,
+                        http_method=http_method,
                     )
                     status_tracker.num_tasks_started += 1
                     status_tracker.num_tasks_in_progress += 1
@@ -153,52 +169,62 @@ class APIRequest:
     attempts_left: int
     result = []
     on_success: Callable
+    http_method: Literal['get', 'post']
 
     async def call_gallica_once(self):
         return await self.call_gallica(
             retry_queue=asyncio.Queue(),
             status_tracker=StatusTracker(),
         )
+    
+    def call(self) -> Callable:
+        if self.http_method == 'get':
+            return lambda: self.session.get(self.query.endpoint_url, params=self.query.params)
+        elif self.http_method == 'post':
+            return lambda: self.session.post(self.query.endpoint_url, headers=self.query.headers, json=self.query.payload)
+        else:
+            raise ValueError(f'Invalid http_action: {self.call}')
 
     async def call_gallica(
         self,
         retry_queue: asyncio.Queue,
         status_tracker: StatusTracker,
     ):
-        """Calls the OpenAI API and saves results."""
+        """Calls Gallica API and saves results."""
         error = None
         response_bytes = None
         elapsed_time = None
-        try:
-            start_time = time.time()
-            async with self.session.get(
-                self.query.endpoint_url, params=self.query.params
-            ) as response:
-                elapsed_time = time.time() - start_time
-                response_bytes = await response.content.read()
-                if response.status != 200:
-                    status_tracker.num_api_errors += 1
-                    error = response
-                    if response.status == 429:
-                        status_tracker.time_of_last_rate_limit_error = time.time()
-                        status_tracker.num_rate_limit_errors += 1
-                        status_tracker.num_api_errors -= (
-                            1  # rate limit errors are counted separately
-                        )
-                else:
-                    self.on_success()
+        # try:
+        start_time = time.time()
+        call_function = self.call()
+        async with call_function() as response:
+            print(response.url)
+            elapsed_time = time.time() - start_time
+            response_bytes = await response.content.read()
+            if response.status != 200:
+                print(response.status)
+                status_tracker.num_api_errors += 1
+                error = response
+                if response.status == 429:
+                    status_tracker.time_of_last_rate_limit_error = time.time()
+                    status_tracker.num_rate_limit_errors += 1
+                    status_tracker.num_api_errors -= (
+                        1  # rate limit errors are counted separately
+                    )
+            else:
+                self.on_success()
 
-        except (
-            Exception
-        ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
-            if type(e) == aiohttp.client_exceptions.ClientConnectorError:
-                status_tracker.time_of_last_rate_limit_error = time.time()
-                status_tracker.num_rate_limit_errors += 1
-                status_tracker.num_api_errors -= (
-                    1  # rate limit errors are counted separately
-                )
-            status_tracker.num_other_errors += 1
-            error = e
+        # except (
+        #     Exception
+        # ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
+        #     if type(e) == aiohttp.client_exceptions.ClientConnectorError:
+        #         status_tracker.time_of_last_rate_limit_error = time.time()
+        #         status_tracker.num_rate_limit_errors += 1
+        #         status_tracker.num_api_errors -= (
+        #             1  # rate limit errors are counted separately
+        #         )
+        #     status_tracker.num_other_errors += 1
+        #     error = e
         if error or response_bytes is None:
             self.result.append(error)
             if self.attempts_left:

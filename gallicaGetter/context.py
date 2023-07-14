@@ -1,5 +1,4 @@
-import asyncio
-from typing import Callable, Generator, List, Tuple
+from typing import Generator, List, Tuple
 from pydantic import BaseModel
 from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.queries import ContentQuery
