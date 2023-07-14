@@ -3,6 +3,7 @@ from typing import List, Optional, Dict, Literal
 from gallicaGetter.context import HTMLContext
 
 from gallicaGetter.contextSnippets import ExtractRoot
+from gallicaGetter.imageSnippet import ImageResponse
 
 
 class Paper(BaseModel):
@@ -49,24 +50,33 @@ class GallicaRecordBase(BaseModel):
     date: str
     url: str
     author: str
-    ocr_quality: float
 
 
 class GallicaRowContext(GallicaRecordBase):
     context: List[ContextRow]
+    ocr_quality: float
+
 
 
 class GallicaPageContext(GallicaRecordBase):
     context: HTMLContext | ExtractRoot
+    ocr_quality: float
+
 
 
 class GallicaRecordFullPageText(GallicaRecordBase):
     context: List[OCRPage]
+    ocr_quality: float
+
+
+class GallicaImageContext(GallicaRecordBase):
+    context: List[ImageResponse]
+
 
 
 class UserResponse(BaseModel):
     records: List[GallicaRowContext] | List[GallicaPageContext] | List[
-        GallicaRecordFullPageText
+        GallicaRecordFullPageText | List[GallicaImageContext]
     ]
     num_results: int
     origin_urls: List[str]

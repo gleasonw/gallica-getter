@@ -1,4 +1,5 @@
-from typing import List
+import json
+from typing import List, Optional
 import aiohttp
 from pydantic import BaseModel
 from gallicaGetter.fetch import post_queries_concurrently
@@ -34,12 +35,39 @@ class ImageArgs(BaseModel):
     page: int
     term: str
 
+class SnippetBean(BaseModel):
+    content: Optional[str]
+
+class PageData(BaseModel):
+    pageCountResults: Optional[int]
+    snippetBeans: Optional[List[SnippetBean]]
+
+    @property
+    def firstImage(self):
+        if self.snippetBeans and len(self.snippetBeans) > 0:
+            if self.snippetBeans[0].content:
+                return self.snippetBeans[0].content
+        return ''
+
+class ImageResponse(BaseModel):
+    ark: str 
+    page: int
+    image: str
+    term: str
+
 class ImageSnippet(GallicaWrapper):
     """ Get images of occurrence paragraph/sentence from Gallica API. """
 
     def parse(self, gallica_responses):
         for response in gallica_responses:
-            yield response
+            json_response = json.loads(response.text)
+            page_data = PageData(**json_response[0])
+            yield ImageResponse(
+                ark=response.query.ark,
+                page=response.query.page,
+                term=response.query.term,
+                image=page_data.firstImage,
+            )
     
     async def get(
         self, 

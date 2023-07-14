@@ -27,6 +27,7 @@ from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from models import (
     ContextRow,
     ContextSearchArgs,
+    GallicaImageContext,
     GallicaPageContext,
     GallicaRecordFullPageText,
     GallicaRowContext,
@@ -347,15 +348,15 @@ async def fetch_records_with_images(
         image_wrapper = ImageSnippet()
         payloads: List[ImageArgs] = []
         for record in records:
-            for page in record.context:
-                if page['page']:
-                    payloads.append(
-                        ImageArgs(
-                            ark=record.ark,
-                            page=page['page'],
-                            term=record.terms[0],
-                        )
+            page = record.context[0]
+            if page['page']:
+                payloads.append(
+                    ImageArgs(
+                        ark=record.ark,
+                        page=page['page'],
+                        term=record.terms[0],
                     )
+                )
 
         images = [
             image
@@ -365,7 +366,22 @@ async def fetch_records_with_images(
             )
         ]
 
-        return images
+        response_items: Dict[str, GallicaImageContext] = {
+            ark: GallicaImageContext(
+                **record.dict(),
+                context=[],
+            ) for ark, record in keyed_docs.items()
+        }
+        for image in images:
+            if image.ark in response_items:
+                response_items[image.ark].context.append(image)
+
+        return {
+            'total_records': total_records,
+            'origin_urls': origin_urls,
+            'records': list(response_items.values()),
+        }
+
     except (
         aiohttp.client_exceptions.ClientConnectorError,
         aiohttp.client_exceptions.ClientConnectionError,
