@@ -194,37 +194,37 @@ class APIRequest:
         error = None
         response_bytes = None
         elapsed_time = None
-        # try:
-        start_time = time.time()
-        call_function = self.call()
-        async with call_function() as response:
-            print(response.url)
-            elapsed_time = time.time() - start_time
-            response_bytes = await response.content.read()
-            if response.status != 200:
-                print(response.status)
-                status_tracker.num_api_errors += 1
-                error = response
-                if response.status == 429:
-                    status_tracker.time_of_last_rate_limit_error = time.time()
-                    status_tracker.num_rate_limit_errors += 1
-                    status_tracker.num_api_errors -= (
-                        1  # rate limit errors are counted separately
-                    )
-            else:
-                self.on_success()
+        try:
+            start_time = time.time()
+            call_function = self.call()
+            async with call_function() as response:
+                print(response.url)
+                elapsed_time = time.time() - start_time
+                response_bytes = await response.content.read()
+                if response.status != 200:
+                    print(response.status)
+                    status_tracker.num_api_errors += 1
+                    error = response
+                    if response.status == 429:
+                        status_tracker.time_of_last_rate_limit_error = time.time()
+                        status_tracker.num_rate_limit_errors += 1
+                        status_tracker.num_api_errors -= (
+                            1  # rate limit errors are counted separately
+                        )
+                else:
+                    self.on_success()
 
-        # except (
-        #     Exception
-        # ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
-        #     if type(e) == aiohttp.client_exceptions.ClientConnectorError:
-        #         status_tracker.time_of_last_rate_limit_error = time.time()
-        #         status_tracker.num_rate_limit_errors += 1
-        #         status_tracker.num_api_errors -= (
-        #             1  # rate limit errors are counted separately
-        #         )
-        #     status_tracker.num_other_errors += 1
-        #     error = e
+        except (
+            Exception
+        ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
+            if type(e) == aiohttp.client_exceptions.ClientConnectorError:
+                status_tracker.time_of_last_rate_limit_error = time.time()
+                status_tracker.num_rate_limit_errors += 1
+                status_tracker.num_api_errors -= (
+                    1  # rate limit errors are counted separately
+                )
+            status_tracker.num_other_errors += 1
+            error = e
         if error or response_bytes is None:
             self.result.append(error)
             if self.attempts_left:
