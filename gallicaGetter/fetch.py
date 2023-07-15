@@ -13,18 +13,19 @@ class Response:
     query: Any
     elapsed_time: float
 
+
 async def post_queries_concurrently(
     queries,
     session: aiohttp.ClientSession,
     initial_rpm: float = 10,
     max_attempts: int = 3,
-): 
+):
     return await fetch_queries_concurrently(
         queries=queries,
         session=session,
         initial_rpm=initial_rpm,
         max_attempts=max_attempts,
-        http_method='post',
+        http_method="post",
     )
 
 
@@ -33,7 +34,7 @@ async def fetch_queries_concurrently(
     session: aiohttp.ClientSession,
     initial_rpm: float = 10,
     max_attempts: int = 3,
-    http_method: Literal['post', 'get'] = 'get',
+    http_method: Literal["post", "get"] = "get",
 ):
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     queries = (query for query in queries)
@@ -116,7 +117,6 @@ async def fetch_queries_concurrently(
         # if all tasks are finished, break
         if status_tracker.num_tasks_in_progress == 0:
             print(f"Finished all tasks in {time.time() - start} seconds")
-            print(status_tracker)
             return (task.result() for task in tasks)
 
         # main loop sleeps briefly so concurrent tasks can run
@@ -169,21 +169,27 @@ class APIRequest:
     attempts_left: int
     result = []
     on_success: Callable
-    http_method: Literal['get', 'post']
+    http_method: Literal["get", "post"]
 
     async def call_gallica_once(self):
         return await self.call_gallica(
             retry_queue=asyncio.Queue(),
             status_tracker=StatusTracker(),
         )
-    
+
     def call(self) -> Callable:
-        if self.http_method == 'get':
-            return lambda: self.session.get(self.query.endpoint_url, params=self.query.params)
-        elif self.http_method == 'post':
-            return lambda: self.session.post(self.query.endpoint_url, headers=self.query.headers, json=self.query.payload)
+        if self.http_method == "get":
+            return lambda: self.session.get(
+                self.query.endpoint_url, params=self.query.params
+            )
+        elif self.http_method == "post":
+            return lambda: self.session.post(
+                self.query.endpoint_url,
+                headers=self.query.headers,
+                json=self.query.payload,
+            )
         else:
-            raise ValueError(f'Invalid http_action: {self.call}')
+            raise ValueError(f"Invalid http_action: {self.call}")
 
     async def call_gallica(
         self,
@@ -198,7 +204,6 @@ class APIRequest:
             start_time = time.time()
             call_function = self.call()
             async with call_function() as response:
-                print(response.url)
                 elapsed_time = time.time() - start_time
                 response_bytes = await response.content.read()
                 if response.status != 200:

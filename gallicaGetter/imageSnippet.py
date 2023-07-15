@@ -14,17 +14,17 @@ class ImageQuery(BaseModel):
     @property
     def payload(self):
         return {
-          "ark": self.ark,
-          "isPeriodique": True,
-          "pages": [self.page],
-          "query": f'(gallica any "{self.term}")',
-          "limitSnippets": 1,
+            "ark": self.ark,
+            "isPeriodique": True,
+            "pages": [self.page],
+            "query": f'(gallica any "{self.term}")',
+            "limitSnippets": 1,
         }
 
     @property
     def endpoint_url(self):
         return "https://rapportgallica.bnf.fr/api/snippet"
-    
+
     @property
     def headers(self):
         return {"Content-Type": "application/json"}
@@ -35,8 +35,10 @@ class ImageArgs(BaseModel):
     page: int
     term: str
 
+
 class SnippetBean(BaseModel):
     content: Optional[str]
+
 
 class PageData(BaseModel):
     pageCountResults: Optional[int]
@@ -47,16 +49,18 @@ class PageData(BaseModel):
         if self.snippetBeans and len(self.snippetBeans) > 0:
             if self.snippetBeans[0].content:
                 return self.snippetBeans[0].content
-        return ''
+        return ""
+
 
 class ImageResponse(BaseModel):
-    ark: str 
+    ark: str
     page: int
     image: str
     term: str
 
+
 class ImageSnippet(GallicaWrapper):
-    """ Get images of occurrence paragraph/sentence from Gallica API. """
+    """Get images of occurrence paragraph/sentence from Gallica API."""
 
     def parse(self, gallica_responses):
         for response in gallica_responses:
@@ -68,9 +72,9 @@ class ImageSnippet(GallicaWrapper):
                 term=response.query.term,
                 image=page_data.firstImage,
             )
-    
+
     async def get(
-        self, 
+        self,
         payloads: List[ImageArgs],
         session: aiohttp.ClientSession,
     ):

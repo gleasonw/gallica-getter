@@ -260,7 +260,7 @@ async def sum_by_record(
     return list(top_papers.values()), list(top_cities.values())
 
 
-@app.get("/api/imageSnippet")
+@app.get("/api/image")
 async def image_snippet(ark: str, term: str, page: int):
     url = "https://rapportgallica.bnf.fr/api/snippet"
     headers = {"Content-Type": "application/json"}
@@ -276,8 +276,8 @@ async def image_snippet(ark: str, term: str, page: int):
             if resp.status != 200:
                 return {"error": "error"}
             result = await resp.json()
-            return result[0]["snippetBeans"][0]["content"]
-        
+            return {"image": result[0]["snippetBeans"][0]["content"]}
+
 
 @app.get("/api/gallicaRecords/image")
 async def fetch_records_with_images(
@@ -305,7 +305,7 @@ async def fetch_records_with_images(
         sort=sort,
     )
 
-    try: 
+    try:
         total_records = 0
         origin_urls = []
 
@@ -332,28 +332,25 @@ async def fetch_records_with_images(
             async for record in get_raw_context(
                 keyed_docs=keyed_docs,
                 session=session,
-                context_source=get_sample_context_in_documents
+                context_source=get_sample_context_in_documents,
             )
         ]
 
         for record in records:
             record.context = [
-                {
-                    "context": page.context,
-                    "page": page.page_num,
-                    "url": page.value.url
-                } for page in record.context.pages
+                {"context": page.context, "page": page.page_num, "url": page.value.url}
+                for page in record.context.pages
             ]
-            
+
         image_wrapper = ImageSnippet()
         payloads: List[ImageArgs] = []
         for record in records:
             page = record.context[0]
-            if page['page']:
+            if page["page"]:
                 payloads.append(
                     ImageArgs(
                         ark=record.ark,
-                        page=page['page'],
+                        page=page["page"],
                         term=record.terms[0],
                     )
                 )
@@ -370,16 +367,17 @@ async def fetch_records_with_images(
             ark: GallicaImageContext(
                 **record.dict(),
                 context=[],
-            ) for ark, record in keyed_docs.items()
+            )
+            for ark, record in keyed_docs.items()
         }
         for image in images:
             if image.ark in response_items:
                 response_items[image.ark].context.append(image)
 
         return {
-            'total_records': total_records,
-            'origin_urls': origin_urls,
-            'records': list(response_items.values()),
+            "num_results": total_records,
+            "origin_urls": origin_urls,
+            "records": list(response_items.values()),
         }
 
     except (
@@ -387,8 +385,6 @@ async def fetch_records_with_images(
         aiohttp.client_exceptions.ClientConnectionError,
     ):
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
-    
-
 
 
 @app.get("/api/gallicaRecords")
@@ -408,7 +404,6 @@ async def fetch_records_from_gallica(
     session: aiohttp.ClientSession = Depends(session),
 ):
     """API endpoint for the context table. To fetch multiple terms linked with OR in the Gallica CQL, pass multiple terms parameters: /api/gallicaRecords?terms=term1&terms=term2&terms=term3"""
-
 
     if limit and limit > 50:
         raise HTTPException(
@@ -554,7 +549,6 @@ async def get_context_parse_by_row(
     context_source: Callable,
     row_splitter: Callable,
 ):
-
     for context_response in await context_source(list(keyed_docs.values()), session):
         record = keyed_docs[context_response.ark]
         page_rows = row_splitter(record, context_response)
@@ -566,14 +560,11 @@ async def get_raw_context(
     session: aiohttp.ClientSession,
     context_source: Callable,
 ):
-
     for context_response in await context_source(
         records=list(keyed_docs.values()), session=session
     ):
         record = keyed_docs[context_response.ark]
-        yield GallicaPageContext(
-            **record.dict(), context=context_response
-        )
+        yield GallicaPageContext(**record.dict(), context=context_response)
 
 
 async def get_context_include_full_page(
