@@ -272,6 +272,7 @@ async def image_snippet(ark: str, term: str, page: int):
     cache_key = f"image_{ark}_{term}_{page}"
     cached_response = cache.get(cache_key)
     if cached_response:
+        print("cache hit")
         return json.loads(cached_response)
 
     url = "https://rapportgallica.bnf.fr/api/snippet"
@@ -313,6 +314,7 @@ async def fetch_records_from_gallica(
     cache_key = f"gallicaRecords_{terms}_{codes}_{cursor}_{date_params}_{limit}_{link_term}_{link_distance}_{source}_{sort}_{row_split}_{include_page_text}_{all_context}"
     cached_response = cache.get(cache_key)
     if cached_response:
+        print("cache hit")
         return json.loads(cached_response)
 
     if limit and limit > 50:
