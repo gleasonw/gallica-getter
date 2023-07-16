@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+import json
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
@@ -23,11 +24,11 @@ from gallicaGetter.utils.parse_xml import (
     get_records_from_xml,
 )
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
+import redis
 
 from models import (
     ContextRow,
     ContextSearchArgs,
-    GallicaImageContext,
     GallicaPageContext,
     GallicaRecordFullPageText,
     GallicaRowContext,
@@ -43,6 +44,14 @@ from models import (
 MAX_PAPERS_TO_SEARCH = 600
 
 gallica_session: aiohttp.ClientSession
+cache = redis.Redis(
+    host=os.environ.get("REDISHOST"),
+    port=os.environ.get("REDISPORT"),
+    password=os.environ.get("REDISPASSWORD"),
+    username=os.environ.get("REDISUSERNAME"),
+    db=0,
+    decode_responses=True,
+)
 
 
 @asynccontextmanager
@@ -120,6 +129,11 @@ async def top(
     session: aiohttp.ClientSession = Depends(session),
 ):
     # have to lock this route because it's the most intensive on Gallica's servers...
+    cache_key = f"top_{term}_{limit}_{date_params}"
+    cached_response = cache.get(cache_key)
+    if cached_response:
+        return json.loads(cached_response)
+
     async with lock:
         try:
             top_papers: List[TopPaper] = []
@@ -173,10 +187,11 @@ async def top(
                 items.sort(key=lambda x: x.count, reverse=True)
                 return items[:limit]
 
-            return {
+            item = {
                 "top_papers": sort_by_count_and_return_top_limit(top_papers),
                 "top_cities": sort_by_count_and_return_top_limit(top_cities),
             }
+            cache.set(cache_key, json.dumps(item), timeout=60 * 60 * 24)
 
         except aiohttp.client_exceptions.ClientConnectorError as e:
             return HTTPException(status_code=503, detail=e.strerror)
@@ -262,6 +277,11 @@ async def sum_by_record(
 
 @app.get("/api/image")
 async def image_snippet(ark: str, term: str, page: int):
+    cache_key = f"image_{ark}_{term}_{page}"
+    cached_response = cache.get(cache_key)
+    if cached_response:
+        return json.loads(cached_response)
+
     url = "https://rapportgallica.bnf.fr/api/snippet"
     headers = {"Content-Type": "application/json"}
     data = {
@@ -276,115 +296,9 @@ async def image_snippet(ark: str, term: str, page: int):
             if resp.status != 200:
                 return {"error": "error"}
             result = await resp.json()
+            item = {"image": result[0]["snippetBeans"][0]["content"]}
+            cache.set(cache_key, json.dumps(item), timeout=60 * 60 * 24)
             return {"image": result[0]["snippetBeans"][0]["content"]}
-
-
-@app.get("/api/gallicaRecords/image")
-async def fetch_records_with_images(
-    terms: List[str] = Query(),
-    codes: Optional[List[str]] = Query(None),
-    cursor: Optional[int] = 0,
-    date_params: dict = Depends(date_params),
-    limit: Optional[int] = 10,
-    link_term: Optional[str] = None,
-    link_distance: Optional[int] = 0,
-    source: Literal["book", "periodical", "all"] = "all",
-    sort: Literal["date", "relevance"] = "relevance",
-    session: aiohttp.ClientSession = Depends(session),
-):
-    args = ContextSearchArgs(
-        start_date=date_params["start_date"],
-        end_date=date_params["end_date"],
-        terms=terms,
-        codes=codes,
-        cursor=cursor,
-        limit=limit,
-        link_term=link_term,
-        link_distance=link_distance,
-        source=source,
-        sort=sort,
-    )
-
-    try:
-        total_records = 0
-        origin_urls = []
-
-        def set_total_records(num_records: int):
-            nonlocal total_records
-            total_records = num_records
-
-        def set_origin_urls(urls: List[str]):
-            nonlocal origin_urls
-            origin_urls = urls
-
-        keyed_docs = {
-            record.ark: record
-            for record in await get_documents_with_occurrences(
-                args=args,
-                on_get_total_records=set_total_records,
-                on_get_origin_urls=set_origin_urls,
-                session=session,
-            )
-        }
-
-        records = [
-            record
-            async for record in get_raw_context(
-                keyed_docs=keyed_docs,
-                session=session,
-                context_source=get_sample_context_in_documents,
-            )
-        ]
-
-        for record in records:
-            record.context = [
-                {"context": page.context, "page": page.page_num, "url": page.value.url}
-                for page in record.context.pages
-            ]
-
-        image_wrapper = ImageSnippet()
-        payloads: List[ImageArgs] = []
-        for record in records:
-            page = record.context[0]
-            if page["page"]:
-                payloads.append(
-                    ImageArgs(
-                        ark=record.ark,
-                        page=page["page"],
-                        term=record.terms[0],
-                    )
-                )
-
-        images = [
-            image
-            for image in await image_wrapper.get(
-                payloads=payloads,
-                session=session,
-            )
-        ]
-
-        response_items: Dict[str, GallicaImageContext] = {
-            ark: GallicaImageContext(
-                **record.dict(),
-                context=[],
-            )
-            for ark, record in keyed_docs.items()
-        }
-        for image in images:
-            if image.ark in response_items:
-                response_items[image.ark].context.append(image)
-
-        return {
-            "num_results": total_records,
-            "origin_urls": origin_urls,
-            "records": list(response_items.values()),
-        }
-
-    except (
-        aiohttp.client_exceptions.ClientConnectorError,
-        aiohttp.client_exceptions.ClientConnectionError,
-    ):
-        raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
 @app.get("/api/gallicaRecords")
@@ -404,6 +318,10 @@ async def fetch_records_from_gallica(
     session: aiohttp.ClientSession = Depends(session),
 ):
     """API endpoint for the context table. To fetch multiple terms linked with OR in the Gallica CQL, pass multiple terms parameters: /api/gallicaRecords?terms=term1&terms=term2&terms=term3"""
+    cache_key = f"gallicaRecords_{terms}_{codes}_{cursor}_{date_params}_{limit}_{link_term}_{link_distance}_{source}_{sort}_{row_split}_{include_page_text}_{all_context}"
+    cached_response = cache.get(cache_key)
+    if cached_response:
+        return json.loads(cached_response)
 
     if limit and limit > 50:
         raise HTTPException(
@@ -483,11 +401,13 @@ async def fetch_records_from_gallica(
                     **props, context_source=get_sample_context_in_documents
                 )
             ]
-        return UserResponse(
+        item = UserResponse(
             records=records,
             num_results=total_records,
             origin_urls=origin_urls,
         )
+        cache.set(cache_key, json.dumps(item.dict()), timeout=60 * 60 * 24)
+        return item
 
     except (
         aiohttp.client_exceptions.ClientConnectorError,
