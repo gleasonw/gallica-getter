@@ -43,6 +43,7 @@ from models import (
 MAX_PAPERS_TO_SEARCH = 600
 
 gallica_session: aiohttp.ClientSession
+print(os.environ.get("REDIS_CONN"))
 cache = redis.from_url(os.environ.get("REDIS_CONN"))
 
 
