@@ -43,7 +43,6 @@ from models import (
 MAX_PAPERS_TO_SEARCH = 600
 
 gallica_session: aiohttp.ClientSession
-print(os.environ.get("REDIS_CONN"))
 cache = redis.from_url(os.environ.get("REDIS_CONN"))
 
 
@@ -184,7 +183,7 @@ async def top(
                 "top_papers": sort_by_count_and_return_top_limit(top_papers),
                 "top_cities": sort_by_count_and_return_top_limit(top_cities),
             }
-            cache.set(cache_key, json.dumps(item), timeout=60 * 60 * 24)
+            cache.set(cache_key, json.dumps(item))
 
         except aiohttp.client_exceptions.ClientConnectorError as e:
             return HTTPException(status_code=503, detail=e.strerror)
@@ -290,7 +289,7 @@ async def image_snippet(ark: str, term: str, page: int):
                 return {"error": "error"}
             result = await resp.json()
             item = {"image": result[0]["snippetBeans"][0]["content"]}
-            cache.set(cache_key, json.dumps(item), timeout=60 * 60 * 24)
+            cache.set(cache_key, json.dumps(item))
             return {"image": result[0]["snippetBeans"][0]["content"]}
 
 
@@ -399,7 +398,7 @@ async def fetch_records_from_gallica(
             num_results=total_records,
             origin_urls=origin_urls,
         )
-        cache.set(cache_key, json.dumps(item.dict()), timeout=60 * 60 * 24)
+        cache.set(cache_key, json.dumps(item.dict()))
         return item
 
     except (
