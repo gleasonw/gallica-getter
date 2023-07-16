@@ -4,7 +4,6 @@ import json
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
-from pydantic import BaseModel
 import uvicorn
 from typing import Any, Callable, Dict, List, Literal, Optional
 from gallicaGetter.context import Context, HTMLContext
@@ -44,14 +43,7 @@ from models import (
 MAX_PAPERS_TO_SEARCH = 600
 
 gallica_session: aiohttp.ClientSession
-cache = redis.Redis(
-    host=os.environ.get("REDISHOST"),
-    port=os.environ.get("REDISPORT"),
-    password=os.environ.get("REDISPASSWORD"),
-    username=os.environ.get("REDISUSERNAME"),
-    db=0,
-    decode_responses=True,
-)
+cache = redis.from_url(os.environ.get("REDIS_URL"))
 
 
 @asynccontextmanager
