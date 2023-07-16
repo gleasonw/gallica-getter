@@ -1,11 +1,8 @@
 aiohttp==3.8.4
-beautifulsoup4==4.11.2
-ciso8601==2.2.0
-fastapi==0.93.0
-fastapi_utils==0.2.1
+beautifulsoup4==4.12.2
+fastapi==0.100.0
 lxml==4.9.2
 pydantic==1.10.2
 pytest==7.2.1
-pytest-asyncio==0.21.0
-uvicorn==0.20.0
-
+redis==4.6.0
+uvicorn==0.23.0
