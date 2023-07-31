@@ -92,8 +92,7 @@ def index():
 async def page_text(ark: str, page: int):
     """Retrieve the full text of a document page on Gallica."""
     try:
-        page_text_getter = PageText()
-        page_data = await page_text_getter.get(
+        page_data = await PageText().get(
             page_queries=[PageQuery(ark=ark, page_num=page)],
             session=gallica_session,
         )
