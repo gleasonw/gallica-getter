@@ -30,12 +30,6 @@ class ImageQuery(BaseModel):
         return {"Content-Type": "application/json"}
 
 
-class ImageArgs(BaseModel):
-    ark: str
-    page: int
-    term: str
-
-
 class SnippetBean(BaseModel):
     content: Optional[str]
 
@@ -75,20 +69,23 @@ class ImageSnippet(GallicaWrapper):
 
     async def get(
         self,
-        payloads: List[ImageArgs],
+        queries: List[ImageQuery],
         session: aiohttp.ClientSession,
+        generate: Optional[bool] = False,
     ):
-        queries = [
-            ImageQuery(
-                ark=payload.ark,
-                page=payload.page,
-                term=payload.term,
+        if generate:
+            return self.parse(
+                await post_queries_concurrently(
+                    queries=queries,
+                    session=session,
+                )
             )
-            for payload in payloads
-        ]
-        return self.parse(
-            await post_queries_concurrently(
-                queries=queries,
-                session=session,
+        else:
+            return list(
+                self.parse(
+                    await post_queries_concurrently(
+                        queries=queries,
+                        session=session,
+                    )
+                )
             )
-        )

@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 import json
+from dotenv import load_dotenv
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
@@ -9,7 +10,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
 from gallicaGetter.fetch import APIRequest, fetch_queries_concurrently
-from gallicaGetter.imageSnippet import ImageArgs, ImageSnippet
+from gallicaGetter.imageSnippet import ImageQuery, ImageSnippet
 from gallicaGetter.pageText import PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,6 +42,8 @@ from models import (
 
 
 MAX_PAPERS_TO_SEARCH = 600
+
+load_dotenv()
 
 gallica_session: aiohttp.ClientSession
 cache = redis.from_url(os.environ.get("REDIS_CONN"))
@@ -275,23 +278,21 @@ async def image_snippet(ark: str, term: str, page: int):
         print("cache hit")
         return json.loads(cached_response)
 
-    url = "https://rapportgallica.bnf.fr/api/snippet"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "ark": ark,
-        "isPeriodique": True,
-        "pages": [page],
-        "query": f'(gallica any "{term}")',
-        "limitSnippets": 1,
-    }
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=data) as resp:
-            if resp.status != 200:
-                return {"error": "error"}
-            result = await resp.json()
-            item = {"image": result[0]["snippetBeans"][0]["content"]}
-            cache.set(cache_key, json.dumps(item))
-            return {"image": result[0]["snippetBeans"][0]["content"]}
+        images = await ImageSnippet().get(
+            queries=[ImageQuery(ark=ark, page=page, term=term)], session=session
+        )
+        if images is None or len(images) == 0:
+            raise HTTPException(status_code=404, detail="Image not found")
+        image = images[0]
+        response = {
+            "image": image.image,
+            "ark": image.ark,
+            "page": image.page,
+            "term": image.term,
+        }
+        cache.set(cache_key, json.dumps(response))
+        return response
 
 
 @app.get("/api/gallicaRecords")
