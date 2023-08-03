@@ -95,8 +95,8 @@ def index():
     return {"message": "ok"}
 
 
-@app.get("/api/pageText")
-async def page_text(ark: str, page: Optional[int]):
+@app.get("/api/fullText")
+async def full_text(ark: str, page: Optional[int]):
     """Retrieve the full text of a document page on Gallica."""
     try:
         page_data = []
