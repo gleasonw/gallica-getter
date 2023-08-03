@@ -1,8 +1,6 @@
-import asyncio
-from typing import Generator, List, Literal, Optional
+from typing import AsyncGenerator, List, Optional
 import aiohttp
 from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.gallicaWrapper import GallicaWrapper, Response
 from pydantic import BaseModel
 from lxml import etree
 
@@ -32,13 +30,18 @@ class ConvertedXMLPage(BaseModel):
     grams_within: Optional[set[str]] = None
 
 
-class PageText(GallicaWrapper):
+class PageText:
     """Wrapper for Gallica's RequestDigitalElement API, Gallica originally returns OCR in XML format for a document page. This class parses the XML to plain text for eventual JSON formatting."""
 
-    def parse(
-        self, gallica_responses: Generator[Response, None, None]
-    ) -> Generator[ConvertedXMLPage, None, None]:
-        for response in gallica_responses:
+    @staticmethod
+    async def get(
+        page_queries: List[PageQuery],
+        session: aiohttp.ClientSession,
+    ) -> AsyncGenerator[ConvertedXMLPage, None]:
+        for response in await fetch_queries_concurrently(
+            queries=page_queries,
+            session=session,
+        ):
             if response is not None:
                 try:
                     elements = etree.fromstring(
@@ -82,15 +85,3 @@ class PageText(GallicaWrapper):
                     text=" ".join(text),
                     grams_within=response.query.grams_within or None,
                 )
-
-    async def get(
-        self,
-        page_queries: List[PageQuery],
-        session: aiohttp.ClientSession,
-    ) -> Generator[ConvertedXMLPage, None, None]:
-        return self.parse(
-            await fetch_queries_concurrently(
-                queries=page_queries,
-                session=session,
-            )
-        )

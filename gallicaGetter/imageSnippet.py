@@ -3,7 +3,6 @@ from typing import List, Optional
 import aiohttp
 from pydantic import BaseModel
 from gallicaGetter.fetch import post_queries_concurrently
-from gallicaGetter.gallicaWrapper import GallicaWrapper
 
 
 class ImageQuery(BaseModel):
@@ -53,11 +52,18 @@ class ImageResponse(BaseModel):
     term: str
 
 
-class ImageSnippet(GallicaWrapper):
+class ImageSnippet:
     """Get images of occurrence paragraph/sentence from Gallica API."""
 
-    def parse(self, gallica_responses):
-        for response in gallica_responses:
+    @staticmethod
+    async def get(
+        queries: List[ImageQuery],
+        session: aiohttp.ClientSession,
+    ):
+        for response in await post_queries_concurrently(
+            queries=queries,
+            session=session,
+        ):
             json_response = json.loads(response.text)
             page_data = PageData(**json_response[0])
             yield ImageResponse(
@@ -65,27 +71,4 @@ class ImageSnippet(GallicaWrapper):
                 page=response.query.page,
                 term=response.query.term,
                 image=page_data.firstImage,
-            )
-
-    async def get(
-        self,
-        queries: List[ImageQuery],
-        session: aiohttp.ClientSession,
-        generate: Optional[bool] = False,
-    ):
-        if generate:
-            return self.parse(
-                await post_queries_concurrently(
-                    queries=queries,
-                    session=session,
-                )
-            )
-        else:
-            return list(
-                self.parse(
-                    await post_queries_concurrently(
-                        queries=queries,
-                        session=session,
-                    )
-                )
             )

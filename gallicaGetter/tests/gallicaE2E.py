@@ -4,6 +4,7 @@ from gallicaGetter.pagination import Pagination
 from gallicaGetter.context import Context
 from gallicaGetter.issues import Issues
 from gallicaGetter.papers import Papers
+from gallicaGetter.queries import ContentQuery
 
 from gallicaGetter.volumeOccurrence import VolumeOccurrence
 from gallicaGetter.periodOccurrence import PeriodOccurrence
@@ -13,10 +14,9 @@ from models import OccurrenceArgs
 
 @pytest.mark.asyncio
 async def test_pagination():
-    getter = Pagination()
     async with aiohttp.ClientSession() as session:
-        records = await getter.get("bpt6k607811b", session=session)
-        list_records = list(records)
+        records = Pagination.get("bpt6k607811b", session=session)
+        list_records = [record async for record in records]
         first = list_records[0]
         assert first.ark == "bpt6k607811b"
         assert first.page_count == 4
@@ -26,12 +26,11 @@ async def test_pagination():
 
 @pytest.mark.asyncio
 async def test_get_page():
-    getter = PageText()
     async with aiohttp.ClientSession() as session:
-        records = await getter.get(
+        records = PageText.get(
             page_queries=[PageQuery(ark="bpt6k607811b", page_num=1)], session=session
         )
-        list_records = list(records)
+        list_records = [record async for record in records]
         assert len(list_records) == 1
         first_record = list_records[0]
         assert first_record.ark == "bpt6k607811b"
@@ -56,8 +55,7 @@ async def test_get_page():
     ],
 )
 async def test_get_volume_occurrences(input, expected_length):
-    getter = VolumeOccurrence()
-    records = await getter.get(OccurrenceArgs(**input), get_all_results=True)
+    records = await VolumeOccurrence.get(OccurrenceArgs(**input), get_all_results=True)
     list_records = list(records)
     assert len(list_records) == expected_length
 
@@ -87,21 +85,19 @@ async def test_get_volume_occurrences(input, expected_length):
     ],
 )
 async def test_get_period_occurrences(input, expected_length):
-    getter = PeriodOccurrence()
     async with aiohttp.ClientSession() as session:
-        records = await getter.get(
+        records = PeriodOccurrence.get(
             OccurrenceArgs(**input), grouping=input["grouping"], session=session
         )
-        list_records = list(records)
+        list_records = [record async for record in records]
         assert len(list_records) == expected_length
 
 
 @pytest.mark.asyncio
 async def test_get_issues():
-    getter = Issues()
     async with aiohttp.ClientSession() as session:
-        records = await getter.get("cb344484501", session=session)
-        list_records = list(records)
+        records = Issues.get("cb344484501", session=session)
+        list_records = [record async for record in records]
         assert len(list_records) == 1
         issue = list_records[0]
         assert issue.code == "cb344484501"
@@ -109,19 +105,20 @@ async def test_get_issues():
 
 @pytest.mark.asyncio
 async def test_get_content():
-    getter = Context()
     async with aiohttp.ClientSession() as session:
-        records = await getter.get([("bpt6k267221f", ["erratum"])], session=session)
-        list_records = list(records)
+        records = Context.get(
+            queries=[ContentQuery(ark="bpt6k267221f", terms=["erratum"])],
+            session=session,
+        )
+        list_records = [record async for record in records]
         context = list_records[0]
         assert context.ark == "bpt6k267221f"
 
 
 @pytest.mark.asyncio
 async def test_get_papers_wrapper():
-    getter = Papers()
-    papers = await getter.get(["cb32895690j"])
-    paper = papers[0]
+    papers = await Papers.get(["cb32895690j"])
+    paper = list(papers)[0]
     assert paper.code == "cb32895690j"
 
 

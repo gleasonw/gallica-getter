@@ -1,8 +1,7 @@
 import asyncio
-from typing import Generator, List
+from typing import AsyncGenerator, Generator, List
 import aiohttp
 from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.gallicaWrapper import GallicaWrapper, Response
 from pydantic import BaseModel
 from lxml import etree
 
@@ -31,17 +30,24 @@ class PaginationData(BaseModel):
     first_displayed_page: int
 
 
-class Pagination(GallicaWrapper):
+class Pagination:
     """Wraps Gallica's Pagination API."""
 
-    def parse(self, gallica_responses):
-        response = list(gallica_responses)[0]
-        try:
-            elements = etree.fromstring(
-                response.text, parser=etree.XMLParser(encoding="utf-8")
+    @staticmethod
+    async def get(
+        ark: str,
+        session: aiohttp.ClientSession,
+    ) -> AsyncGenerator[PaginationData, None]:
+        query = PaginationQuery(ark=ark)
+        response = list(
+            await fetch_queries_concurrently(
+                queries=[query],
+                session=session,
             )
-        except etree.XMLSyntaxError:
-            return []
+        )[0]
+        elements = etree.fromstring(
+            response.text, parser=etree.XMLParser(encoding="utf-8")
+        )
         structure = elements.find("structure")
         if structure is not None:
             yield PaginationData(
@@ -53,16 +59,3 @@ class Pagination(GallicaWrapper):
                 nb_vue_images=structure.find("nbVueImages").text,
                 first_displayed_page=structure.find("firstDisplayedPage").text,
             )
-
-    async def get(
-        self,
-        ark: str,
-        session: aiohttp.ClientSession,
-    ) -> Generator[PaginationData, None, None]:
-        query = PaginationQuery(ark=ark)
-        return self.parse(
-            await fetch_queries_concurrently(
-                queries=[query],
-                session=session,
-            )
-        )

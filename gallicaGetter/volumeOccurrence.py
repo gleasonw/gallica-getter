@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 import urllib.parse
 
@@ -12,7 +11,6 @@ from gallicaGetter.utils.index_query_builds import (
     index_queries_by_num_results,
 )
 from gallicaGetter.utils.date import Date
-from gallicaGetter.gallicaWrapper import GallicaWrapper, Response
 from gallicaGetter.utils.parse_xml import (
     get_author_from_record_xml,
     get_ocr_quality_from_record_xml,
@@ -25,7 +23,7 @@ from gallicaGetter.utils.parse_xml import (
     get_publisher_from_record_xml,
 )
 
-from typing import Callable, Generator, List, Literal, Optional, Tuple
+from typing import Any, Callable, Generator, List, Optional
 
 from models import OccurrenceArgs
 
@@ -58,37 +56,11 @@ class VolumeRecord:
         }
 
 
-class VolumeOccurrence(GallicaWrapper):
+class VolumeOccurrence:
     """Fetches occurrence metadata from Gallica's SRU API. There may be many occurrences in one Gallica record."""
 
-    def parse(
-        self,
-        gallica_responses: List[Response],
-    ):
-        for response in gallica_responses:
-            if response is not None:
-                for i, record in enumerate(get_records_from_xml(response.text)):
-                    if i == 0 and self.on_get_total_records:
-                        self.on_get_total_records(
-                            get_num_records_from_gallica_xml(response.text)
-                        )
-                    assert isinstance(response.query, VolumeQuery)
-                    yield VolumeRecord(
-                        paper_title=get_paper_title_from_record_xml(record),
-                        paper_code=get_paper_code_from_record_xml(record),
-                        date=get_date_from_record_xml(record),
-                        url=get_url_from_record(record),
-                        author=get_author_from_record_xml(record),
-                        publisher=get_publisher_from_record_xml(record),
-                        ocr_quality=float(get_ocr_quality_from_record_xml(record)),
-                        terms=response.query.terms,
-                    )
-
-    def post_init(self):
-        self.on_get_total_records: Optional[Callable[[int], None]] = None
-
+    @staticmethod
     async def get_custom_query(
-        self,
         query: VolumeQuery,
         session: aiohttp.ClientSession,
         on_get_origin_urls: Optional[Callable[[List[str]], None]] = None,
@@ -99,15 +71,15 @@ class VolumeOccurrence(GallicaWrapper):
             on_get_origin_urls(
                 [url + urllib.parse.urlencode(query.params) for query in base_queries]
             )
-        return self.parse(
-            await fetch_queries_concurrently(
+        return VolumeOccurrence.parse(
+            gallica_responses=await fetch_queries_concurrently(
                 queries=base_queries,
                 session=session,
             )
         )
 
+    @staticmethod
     async def get(
-        self,
         args: OccurrenceArgs,
         on_get_total_records: Optional[Callable[[int], None]] = None,
         on_get_origin_urls: Optional[Callable[[List[str]], None]] = None,
@@ -117,9 +89,8 @@ class VolumeOccurrence(GallicaWrapper):
         if session is None:
             async with aiohttp.ClientSession() as session:
                 local_args = locals()
-                del local_args["self"]
                 del local_args["session"]
-                return await self.get(**local_args, session=session)
+                return await VolumeOccurrence.get(**local_args, session=session)
         else:
             base_queries = build_base_queries(
                 args=args,
@@ -137,14 +108,35 @@ class VolumeOccurrence(GallicaWrapper):
             else:
                 # num results less than 50, the base query is fine
                 queries = base_queries
-                # we also need to assign the total records callback to the instance,
-                # since we will only know during the parse step
-                self.on_get_total_records = on_get_total_records
         if on_get_origin_urls:
             url = "https://gallica.bnf.fr/SRU?"
             on_get_origin_urls(
                 [url + urllib.parse.urlencode(query.params) for query in queries]
             )
-        return self.parse(
-            await fetch_queries_concurrently(queries=queries, session=session)
+        return VolumeOccurrence.parse(
+            gallica_responses=await fetch_queries_concurrently(
+                queries=queries, session=session
+            ),
+            on_get_total_records=on_get_total_records,
         )
+
+    @staticmethod
+    def parse(gallica_responses: Any, on_get_total_records=None):
+        for response in gallica_responses:
+            if response is not None:
+                for i, record in enumerate(get_records_from_xml(response.text)):
+                    if i == 0 and on_get_total_records:
+                        on_get_total_records(
+                            get_num_records_from_gallica_xml(response.text)
+                        )
+                    assert isinstance(response.query, VolumeQuery)
+                    yield VolumeRecord(
+                        paper_title=get_paper_title_from_record_xml(record),
+                        paper_code=get_paper_code_from_record_xml(record),
+                        date=get_date_from_record_xml(record),
+                        url=get_url_from_record(record),
+                        author=get_author_from_record_xml(record),
+                        publisher=get_publisher_from_record_xml(record),
+                        ocr_quality=float(get_ocr_quality_from_record_xml(record)),
+                        terms=response.query.terms,
+                    )

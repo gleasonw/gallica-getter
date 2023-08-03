@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Generator, List
+from typing import AsyncGenerator, List
+import aiohttp
 
 from bs4 import BeautifulSoup
 from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.queries import FullTextQuery
-from gallicaGetter.gallicaWrapper import GallicaWrapper
 
 
 @dataclass(slots=True)
@@ -25,14 +25,22 @@ class ParsedGallicaHTML:
         return self.text
 
 
-class FullText(GallicaWrapper):
+class FullText:
     """Wraps Gallica's full text API. Can be an expensive fetch, and is rate-limited."""
 
-    def parse(self, gallica_responses):
-        return (ParsedGallicaHTML(response.text) for response in gallica_responses)
+    @staticmethod
+    async def get(
+        ark_codes, session: aiohttp.ClientSession | None = None
+    ) -> AsyncGenerator[ParsedGallicaHTML, None]:
+        if session is None:
+            async with aiohttp.ClientSession() as session:
+                async for result in FullText.get(ark_codes=ark_codes, session=session):
+                    yield result
 
-    async def get(self, ark_codes) -> Generator[ParsedGallicaHTML, None, None]:
         if type(ark_codes) is not list:
             ark_codes = [ark_codes]
         queries = [FullTextQuery(ark=code) for code in ark_codes]
-        return self.parse(await fetch_queries_concurrently(queries=queries))
+        for response in await fetch_queries_concurrently(
+            queries=queries, session=session
+        ):
+            yield ParsedGallicaHTML(response.text)

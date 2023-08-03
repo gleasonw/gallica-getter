@@ -5,9 +5,10 @@ from collections import Counter
 import aiohttp
 from bs4 import BeautifulSoup
 import os
-from gallicaGetter.queries import VolumeQuery
+from gallicaGetter.queries import ContentQuery, VolumeQuery
 from gallicaGetter.utils.index_query_builds import get_num_results_for_queries
 from gallicaGetter.volumeOccurrence import VolumeOccurrence
+from models import OccurrenceArgs
 
 from gallicaGetter.context import Context
 
@@ -28,7 +29,6 @@ async def get_gallica_core(
 ) -> Dict[str, int]:
     """An experimental tool that returns the most frequent words in the surrounding context of a target word occurrence."""
 
-    volume_wrapper = VolumeOccurrence()
     num_volumes_with_root_gram = await get_num_results_for_queries(
         queries=[
             VolumeQuery(
@@ -45,11 +45,13 @@ async def get_gallica_core(
         query.gallica_results_for_params for query in num_volumes_with_root_gram
     )
     indices_to_sample = random.sample(range(num_volumes), sample_size)
-    volumes_with_root_gram = await volume_wrapper.get(
-        terms=[root_gram],
-        start_date=start_date,
-        end_date=end_date,
-        start_index=indices_to_sample,
+    volumes_with_root_gram = await VolumeOccurrence.get(
+        OccurrenceArgs(
+            terms=[root_gram],
+            start_date=start_date,
+            end_date=end_date,
+            start_index=indices_to_sample,
+        ),
         session=session,
     )
     volume_codes = [
@@ -67,12 +69,11 @@ async def get_gallica_core(
 async def get_text_for_codes(
     codes: List[str], target_word: str, session: aiohttp.ClientSession
 ) -> str:
-    text_wrapper = Context()
     text = ""
-    text_records = await text_wrapper.get(
-        [(code, [target_word]) for code in codes], session=session
-    )
-    for record in text_records:
+    async for record in Context.get(
+        queries=[ContentQuery(ark=code, terms=[target_word]) for code in codes],
+        session=session,
+    ):
         for page in record.pages:
             soup = BeautifulSoup(page.context, "html.parser")
             text += soup.get_text()

@@ -1,10 +1,9 @@
-from typing import Generator, List
+from typing import AsyncGenerator, List
 
 import aiohttp
-from gallicaGetter.fetch import Response, fetch_queries_concurrently
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.queries import IssuesQuery
 from gallicaGetter.utils.parse_xml import get_years_published
-from gallicaGetter.gallicaWrapper import GallicaWrapper
 from dataclasses import dataclass
 
 
@@ -14,20 +13,18 @@ class IssueYearRecord:
     years: List[str]
 
 
-class Issues(GallicaWrapper):
+class Issues:
     """Fetches periodical periodical publishing years from Gallica's Issues API. Used in PapersWrapper."""
 
-    def parse(self, gallica_responses: Generator[Response, None, None]):
-        for response in gallica_responses:
+    @staticmethod
+    async def get(
+        codes, session: aiohttp.ClientSession
+    ) -> AsyncGenerator[IssueYearRecord, None]:
+        if type(codes) == str:
+            codes = [codes]
+        queries = [IssuesQuery(code=code) for code in codes]
+        for response in await fetch_queries_concurrently(queries, session=session):
             if response is not None:
                 years = get_years_published(response.text)
                 code = response.query.code
                 yield IssueYearRecord(code=code, years=years)
-
-    async def get(
-        self, codes, session: aiohttp.ClientSession
-    ) -> Generator[IssueYearRecord, None, None]:
-        if type(codes) == str:
-            codes = [codes]
-        queries = [IssuesQuery(code=code) for code in codes]
-        return self.parse(await fetch_queries_concurrently(queries, session=session))

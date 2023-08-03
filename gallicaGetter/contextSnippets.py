@@ -1,14 +1,11 @@
-import asyncio
 from dataclasses import dataclass
 import json
-from typing import Callable, Generator, List, Tuple
+from typing import AsyncGenerator, List
 
 import aiohttp
 from pydantic import BaseModel
 import pydantic
-from gallicaGetter.context import HTMLContext
-from gallicaGetter.fetch import Response, fetch_queries_concurrently
-from gallicaGetter.gallicaWrapper import GallicaWrapper
+from gallicaGetter.fetch import fetch_queries_concurrently
 
 
 @dataclass
@@ -63,30 +60,24 @@ class ExtractRoot(BaseModel):
         return self.fragment.contenu
 
 
-class ContextSnippets(GallicaWrapper):
-    def parse(self, gallica_responses):
-        for response in gallica_responses:
+class ContextSnippets:
+    @staticmethod
+    async def get(
+        queries: List[ContextSnippetQuery],
+        session: aiohttp.ClientSession | None = None,
+    ) -> AsyncGenerator[ExtractRoot, None]:
+        if session is None:
+            async with aiohttp.ClientSession() as session:
+                async for result in ContextSnippets.get(queries, session):
+                    yield result
+
+        for response in await fetch_queries_concurrently(
+            queries=queries,
+            session=session,
+        ):
             parsed_json = json.loads(response.text)
             try:
                 yield ExtractRoot(**parsed_json, ark=response.query.ark)
             except pydantic.ValidationError:
                 print("Error parsing response")
                 print(parsed_json)
-
-    async def get(
-        self,
-        context_pairs: List[Tuple[str, str]],
-        session: aiohttp.ClientSession | None = None,
-    ) -> Generator[ExtractRoot, None, None]:
-        queries: List[ContextSnippetQuery] = []
-        for pair in context_pairs:
-            term = pair[1]
-            if " " in term and not (term.startswith('"') and term.endswith('"')):
-                term = f'"{term}"'
-            queries.append(ContextSnippetQuery(ark=pair[0], term=term))
-        return self.parse(
-            await fetch_queries_concurrently(
-                queries=queries,
-                session=session,
-            )
-        )

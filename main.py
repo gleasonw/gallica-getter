@@ -8,14 +8,18 @@ from bs4 import BeautifulSoup, ResultSet
 import uvicorn
 from typing import Any, Callable, Dict, List, Literal, Optional
 from gallicaGetter.context import Context, HTMLContext
-from gallicaGetter.contextSnippets import ContextSnippets, ExtractRoot
+from gallicaGetter.contextSnippets import (
+    ContextSnippetQuery,
+    ContextSnippets,
+    ExtractRoot,
+)
 from gallicaGetter.fetch import APIRequest, fetch_queries_concurrently
 from gallicaGetter.imageSnippet import ImageQuery, ImageSnippet
 from gallicaGetter.pageText import PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
-from gallicaGetter.queries import VolumeQuery
+from gallicaGetter.queries import ContentQuery, VolumeQuery
 from gallicaGetter.utils.parse_xml import (
     get_decollapsing_data_from_gallica_xml,
     get_num_records_from_gallica_xml,
@@ -46,7 +50,6 @@ MAX_PAPERS_TO_SEARCH = 600
 load_dotenv()
 
 gallica_session: aiohttp.ClientSession
-cache = redis.from_url(os.environ.get("REDIS_CONN"))
 
 
 @asynccontextmanager
@@ -95,12 +98,13 @@ def index():
 async def page_text(ark: str, page: int):
     """Retrieve the full text of a document page on Gallica."""
     try:
-        page_text_getter = PageText()
-        page_data = await page_text_getter.get(
-            page_queries=[PageQuery(ark=ark, page_num=page)],
-            session=gallica_session,
-        )
-        page_data = list(page_data)
+        page_data = [
+            data
+            async for data in PageText.get(
+                page_queries=[PageQuery(ark=ark, page_num=page)],
+                session=gallica_session,
+            )
+        ]
         if page_data and len(page_data) > 0:
             return page_data[0]
         return None
@@ -124,10 +128,6 @@ async def top(
     session: aiohttp.ClientSession = Depends(session),
 ):
     # have to lock this route because it's the most intensive on Gallica's servers...
-    cache_key = f"top_{term}_{limit}_{date_params}"
-    cached_response = cache.get(cache_key)
-    if cached_response:
-        return json.loads(cached_response)
 
     async with lock:
         try:
@@ -152,6 +152,7 @@ async def top(
                 task_id=0,
                 attempts_left=3,
                 on_success=lambda: None,
+                http_method="get",
             ).call_gallica_once()
             if num_paper_response is not None:
                 num_papers = get_num_records_from_gallica_xml(num_paper_response.text)
@@ -186,7 +187,6 @@ async def top(
                 "top_papers": sort_by_count_and_return_top_limit(top_papers),
                 "top_cities": sort_by_count_and_return_top_limit(top_cities),
             }
-            cache.set(cache_key, json.dumps(item))
 
         except aiohttp.client_exceptions.ClientConnectorError as e:
             return HTTPException(status_code=503, detail=e.strerror)
@@ -272,16 +272,13 @@ async def sum_by_record(
 
 @app.get("/api/image")
 async def image_snippet(ark: str, term: str, page: int):
-    cache_key = f"image_{ark}_{term}_{page}"
-    cached_response = cache.get(cache_key)
-    if cached_response:
-        print("cache hit")
-        return json.loads(cached_response)
-
     async with aiohttp.ClientSession() as session:
-        images = await ImageSnippet().get(
-            queries=[ImageQuery(ark=ark, page=page, term=term)], session=session
-        )
+        images = [
+            image
+            async for image in ImageSnippet.get(
+                queries=[ImageQuery(ark=ark, page=page, term=term)], session=session
+            )
+        ]
         if images is None or len(images) == 0:
             raise HTTPException(status_code=404, detail="Image not found")
         image = images[0]
@@ -291,7 +288,6 @@ async def image_snippet(ark: str, term: str, page: int):
             "page": image.page,
             "term": image.term,
         }
-        cache.set(cache_key, json.dumps(response))
         return response
 
 
@@ -312,11 +308,6 @@ async def fetch_records_from_gallica(
     session: aiohttp.ClientSession = Depends(session),
 ):
     """API endpoint for the context table. To fetch multiple terms linked with OR in the Gallica CQL, pass multiple terms parameters: /api/gallicaRecords?terms=term1&terms=term2&terms=term3"""
-    cache_key = f"gallicaRecords_{terms}_{codes}_{cursor}_{date_params}_{limit}_{link_term}_{link_distance}_{source}_{sort}_{row_split}_{include_page_text}_{all_context}"
-    cached_response = cache.get(cache_key)
-    if cached_response:
-        print("cache hit")
-        return json.loads(cached_response)
 
     if limit and limit > 50:
         raise HTTPException(
@@ -401,7 +392,6 @@ async def fetch_records_from_gallica(
             num_results=total_records,
             origin_urls=origin_urls,
         )
-        cache.set(cache_key, json.dumps(item.dict()))
         return item
 
     except (
@@ -510,8 +500,7 @@ async def get_context_include_full_page(
                     page_num=int(page.page_num),
                 )
             )
-    page_data = await page_text_wrapper.get(page_queries=queries, session=session)
-    for occurrence_page in page_data:
+    async for occurrence_page in PageText.get(page_queries=queries, session=session):
         record = gallica_records[occurrence_page.ark]
         terms_string = " ".join(record.terms)
 
@@ -623,12 +612,15 @@ async def get_all_context_in_documents(
 ) -> List[HTMLContext]:
     """Queries Gallica's ContentSearch API's to get context for ALL occurrences within a list of documents."""
 
-    context_wrapper = Context()
-    context = await context_wrapper.get(
-        [(record.ark, record.terms) for record in records],
-        session=session,
-    )
-    return list(context)
+    return [
+        context
+        async for context in Context.get(
+            queries=[
+                ContentQuery(ark=record.ark, terms=record.terms) for record in records
+            ],
+            session=session,
+        )
+    ]
 
 
 async def get_sample_context_in_documents(
@@ -642,13 +634,16 @@ async def get_sample_context_in_documents(
         print(
             "Warning: using sample context for multi-word terms; only the first term will be used."
         )
-    context_snippet_wrapper = ContextSnippets()
-    context = await context_snippet_wrapper.get(
-        [(record.ark, record.terms[0]) for record in records],
-        session=session,
-    )
-
-    return list(context)
+    return [
+        context
+        async for context in ContextSnippets.get(
+            queries=[
+                ContextSnippetQuery(ark=record.ark, term=record.terms[0])
+                for record in records
+            ],
+            session=session,
+        )
+    ]
 
 
 def make_date_from_year_mon_day(

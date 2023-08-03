@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 
 import aiohttp
-from gallicaGetter.fetch import Response, fetch_queries_concurrently
+from gallicaGetter.fetch import fetch_queries_concurrently
 from gallicaGetter.utils.date import Date
 from gallicaGetter.utils.parse_xml import get_num_records_from_gallica_xml
-from gallicaGetter.gallicaWrapper import GallicaWrapper
 from gallicaGetter.utils.base_query_builds import build_base_queries
-from typing import Generator, List, Literal, Optional
+from typing import AsyncGenerator, Literal
 
 from models import OccurrenceArgs
 
@@ -30,26 +29,22 @@ class PeriodRecord:
         return self._date.day
 
 
-class PeriodOccurrence(GallicaWrapper):
+class PeriodOccurrence:
     """Fetches # occurrences of terms in a given period of time. Useful for making graphs."""
 
+    @staticmethod
     async def get(
-        self,
         args: OccurrenceArgs,
         session: aiohttp.ClientSession,
         grouping: Literal["year", "month"] = "year",
-        onProgressUpdate=None,
-    ) -> Generator[PeriodRecord, None, None]:
+    ) -> AsyncGenerator[PeriodRecord, None]:
         queries = build_base_queries(
             args=args,
             grouping=grouping,
         )
-        return self.parse(
-            await fetch_queries_concurrently(queries=queries, session=session)
-        )
-
-    def parse(self, gallica_responses: Generator[Response, None, None]):
-        for response in gallica_responses:
+        for response in await fetch_queries_concurrently(
+            queries=queries, session=session
+        ):
             count = get_num_records_from_gallica_xml(response.text)
             query = response.query
             yield PeriodRecord(
