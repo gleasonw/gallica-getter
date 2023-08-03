@@ -1,7 +1,5 @@
 import asyncio
 from contextlib import asynccontextmanager
-import json
-from dotenv import load_dotenv
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
@@ -48,7 +46,6 @@ from models import (
 
 MAX_PAPERS_TO_SEARCH = 600
 
-load_dotenv()
 
 gallica_session: aiohttp.ClientSession
 
