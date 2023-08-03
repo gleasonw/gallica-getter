@@ -99,8 +99,8 @@ async def page_text(ark: str, page: int):
     """Retrieve the full text of a document page on Gallica."""
     try:
         page_data = [
-            data
-            async for data in PageText.get(
+            page
+            async for page in PageText().get(
                 page_queries=[PageQuery(ark=ark, page_num=page)],
                 session=gallica_session,
             )
