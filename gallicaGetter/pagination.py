@@ -37,7 +37,7 @@ class Pagination:
     async def get(
         ark: str,
         session: aiohttp.ClientSession,
-    ) -> AsyncGenerator[PaginationData, None]:
+    ) -> PaginationData | None:
         query = PaginationQuery(ark=ark)
         response = list(
             await fetch_queries_concurrently(
@@ -50,7 +50,7 @@ class Pagination:
         )
         structure = elements.find("structure")
         if structure is not None:
-            yield PaginationData(
+            return PaginationData(
                 ark=response.query.ark,
                 page_count=len(elements.find("pages")),
                 has_toc=structure.find("hasToc").text == "true",

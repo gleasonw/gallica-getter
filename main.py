@@ -19,6 +19,7 @@ from gallicaGetter.pageText import PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
+from gallicaGetter.pagination import Pagination
 from gallicaGetter.queries import ContentQuery, VolumeQuery
 from gallicaGetter.utils.parse_xml import (
     get_decollapsing_data_from_gallica_xml,
@@ -95,18 +96,33 @@ def index():
 
 
 @app.get("/api/pageText")
-async def page_text(ark: str, page: int):
+async def page_text(ark: str, page: Optional[int]):
     """Retrieve the full text of a document page on Gallica."""
     try:
-        page_data = [
-            page
-            async for page in PageText().get(
-                page_queries=[PageQuery(ark=ark, page_num=page)],
-                session=gallica_session,
-            )
-        ]
+        page_data = []
+        if page is None:
+            pagination_data = await Pagination.get(ark=ark, session=gallica_session)
+            if pagination_data:
+                page_data = [
+                    page
+                    async for page in PageText.get(
+                        page_queries=[
+                            PageQuery(ark=ark, page_num=i)
+                            for i in range(1, pagination_data.page_count)
+                        ],
+                        session=gallica_session,
+                    )
+                ]
+        else:
+            page_data = [
+                page
+                async for page in PageText.get(
+                    page_queries=[PageQuery(ark=ark, page_num=page)],
+                    session=gallica_session,
+                )
+            ]
         if page_data and len(page_data) > 0:
-            return page_data[0]
+            return page_data
         return None
     except aiohttp.client_exceptions.ClientConnectorError:
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
@@ -248,11 +264,9 @@ async def sum_by_record(
     query: VolumeQuery,
     session: aiohttp.ClientSession,
 ):
-    volume_wrapper = VolumeOccurrence()
     top_papers: Dict[str, TopPaper] = {}
     top_cities: Dict[str, TopCity] = {}
-    volume_generator = await volume_wrapper.get_custom_query(query, session=session)
-    for volume in volume_generator:
+    for volume in await VolumeOccurrence.get_custom_query(query, session=session):
         if volume.paper_title not in top_papers:
             top_papers[volume.paper_title] = TopPaper(
                 count=1,
