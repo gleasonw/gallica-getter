@@ -93,19 +93,20 @@ def index():
 
 
 @app.get("/api/fullText")
-async def full_text(ark: str, page: Optional[int]):
+async def full_text(ark: str, page: Optional[int] = None):
     """Retrieve the full text of a document page on Gallica."""
     try:
         page_data = []
         if page is None:
             pagination_data = await Pagination.get(ark=ark, session=gallica_session)
+            print(pagination_data)
             if pagination_data:
                 page_data = [
                     page
                     async for page in PageText.get(
                         page_queries=[
                             PageQuery(ark=ark, page_num=i)
-                            for i in range(1, pagination_data.page_count)
+                            for i in range(1, pagination_data.page_count + 1)
                         ],
                         session=gallica_session,
                     )
@@ -232,25 +233,26 @@ async def sum_by_paper_query(
         queries=num_results_in_paper_queries,
         session=session,
     ):
-        num_results = get_num_records_from_gallica_xml(xml=response.text)
-        if num_results > 0:
-            records = get_records_from_xml(response.text)
-            record = records[0]
-            if record is not None:
-                top_papers.append(
-                    TopPaper(
-                        paper=Paper(
-                            code=response.query.codes[0],
-                            title=get_paper_title_from_record_xml(record),
-                            publisher=get_publisher_from_record_xml(record),
-                        ),
-                        count=num_results,
+        if response is not None:
+            num_results = get_num_records_from_gallica_xml(xml=response.text)
+            if num_results > 0:
+                records = get_records_from_xml(response.text)
+                record = records[0]
+                if record is not None:
+                    top_papers.append(
+                        TopPaper(
+                            paper=Paper(
+                                code=response.query.codes[0],
+                                title=get_paper_title_from_record_xml(record),
+                                publisher=get_publisher_from_record_xml(record),
+                            ),
+                            count=num_results,
+                        )
                     )
-                )
-                record_publisher = get_publisher_from_record_xml(record)
-                if record_publisher not in city_counts:
-                    city_counts[record_publisher] = 0
-                city_counts[record_publisher] += num_results
+                    record_publisher = get_publisher_from_record_xml(record)
+                    if record_publisher not in city_counts:
+                        city_counts[record_publisher] = 0
+                    city_counts[record_publisher] += num_results
 
     return top_papers, [
         TopCity(city=city, count=count) for city, count in city_counts.items()

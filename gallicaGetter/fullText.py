@@ -43,4 +43,5 @@ class FullText:
         for response in await fetch_queries_concurrently(
             queries=queries, session=session
         ):
-            yield ParsedGallicaHTML(response.text)
+            if response is not None:
+                yield ParsedGallicaHTML(response.text)

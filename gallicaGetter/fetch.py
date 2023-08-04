@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 import random
 import time
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Coroutine, Generator, Literal
 import aiohttp
 import aiohttp.client_exceptions
 
@@ -35,7 +35,7 @@ async def fetch_queries_concurrently(
     initial_rpm: float = 10,
     max_attempts: int = 3,
     http_method: Literal["post", "get"] = "get",
-):
+) -> Generator[Response | None, Any, Any]:
     """Processes API requests in parallel, throttling to stay under rate limits. (heavy copy of OpenAI cookbok model)"""
     queries = (query for query in queries)
     seconds_to_pause_after_rate_limit_error = random.randint(20, 25)

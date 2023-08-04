@@ -75,9 +75,10 @@ class ContextSnippets:
             queries=queries,
             session=session,
         ):
-            parsed_json = json.loads(response.text)
-            try:
-                yield ExtractRoot(**parsed_json, ark=response.query.ark)
-            except pydantic.ValidationError:
-                print("Error parsing response")
-                print(parsed_json)
+            if response is not None:
+                parsed_json = json.loads(response.text)
+                try:
+                    yield ExtractRoot(**parsed_json, ark=response.query.ark)
+                except pydantic.ValidationError:
+                    print("Error parsing response")
+                    print(parsed_json)

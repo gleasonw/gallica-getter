@@ -64,11 +64,12 @@ class ImageSnippet:
             queries=queries,
             session=session,
         ):
-            json_response = json.loads(response.text)
-            page_data = PageData(**json_response[0])
-            yield ImageResponse(
-                ark=response.query.ark,
-                page=response.query.page,
-                term=response.query.term,
-                image=page_data.firstImage,
-            )
+            if response:
+                json_response = json.loads(response.text)
+                page_data = PageData(**json_response[0])
+                yield ImageResponse(
+                    ark=response.query.ark,
+                    page=response.query.page,
+                    term=response.query.term,
+                    image=page_data.firstImage,
+                )

@@ -45,17 +45,18 @@ class Pagination:
                 session=session,
             )
         )[0]
-        elements = etree.fromstring(
-            response.text, parser=etree.XMLParser(encoding="utf-8")
-        )
-        structure = elements.find("structure")
-        if structure is not None:
-            return PaginationData(
-                ark=response.query.ark,
-                page_count=len(elements.find("pages")),
-                has_toc=structure.find("hasToc").text == "true",
-                toc_location=structure.find("TocLocation").text,
-                has_content=structure.find("hasContent").text == "true",
-                nb_vue_images=structure.find("nbVueImages").text,
-                first_displayed_page=structure.find("firstDisplayedPage").text,
+        if response is not None:
+            elements = etree.fromstring(
+                response.text, parser=etree.XMLParser(encoding="utf-8")
             )
+            structure = elements.find("structure")
+            if structure is not None:
+                return PaginationData(
+                    ark=response.query.ark,
+                    page_count=len(elements.find("pages")),
+                    has_toc=structure.find("hasToc").text == "true",
+                    toc_location=structure.find("TocLocation").text,
+                    has_content=structure.find("hasContent").text == "true",
+                    nb_vue_images=structure.find("nbVueImages").text,
+                    first_displayed_page=structure.find("firstDisplayedPage").text,
+                )
