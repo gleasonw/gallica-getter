@@ -35,12 +35,15 @@ class Context:
             queries=queries,
             session=session,
         ):
-            num_results_and_pages = get_num_results_and_pages_for_context(response.text)
-            yield HTMLContext(
-                num_results=num_results_and_pages[0],
-                pages=[
-                    GallicaPage(page_label=occurrence[0], context=occurrence[1])
-                    for occurrence in num_results_and_pages[1]
-                ],
-                ark=response.query.ark,
-            )
+            if response:
+                num_results_and_pages = get_num_results_and_pages_for_context(
+                    response.text
+                )
+                yield HTMLContext(
+                    num_results=num_results_and_pages[0],
+                    pages=[
+                        GallicaPage(page_label=occurrence[0], context=occurrence[1])
+                        for occurrence in num_results_and_pages[1]
+                    ],
+                    ark=response.query.ark,
+                )

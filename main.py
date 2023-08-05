@@ -27,7 +27,6 @@ from gallicaGetter.utils.parse_xml import (
     get_records_from_xml,
 )
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
-import redis
 
 from models import (
     ContextRow,
@@ -304,6 +303,87 @@ async def image_snippet(ark: str, term: str, page: int):
         return response
 
 
+@app.get("/api/volume")
+async def fetch_volume_context(ark: str, term: str):
+    async with aiohttp.ClientSession() as session:
+        data = [
+            context
+            async for context in Context.get(
+                queries=[ContentQuery(ark=ark, terms=[term])],
+                session=session,
+            )
+        ][0]
+        rows = []
+        for page in data.pages:
+            soup = BeautifulSoup(page.context, "html.parser")
+            spans = soup.find_all("span", {"class": "highlight"})
+            if spans:
+                page_rows = parse_spans_to_rows(
+                    spans=spans,
+                    terms=[term],
+                )
+                for row in page_rows:
+                    row.page_num = page.page_num
+                    rows.append(row)
+        return rows
+
+
+@app.get("/api/sru")
+async def fetch_sru(
+    terms: List[str] = Query(),
+    codes: Optional[List[str]] = Query(None),
+    cursor: Optional[int] = 0,
+    date_params: dict = Depends(date_params),
+    limit: Optional[int] = 10,
+    link_term: Optional[str] = None,
+    link_distance: Optional[int] = 0,
+    source: Literal["book", "periodical", "all"] = "all",
+    sort: Literal["date", "relevance"] = "relevance",
+    session: aiohttp.ClientSession = Depends(session),
+):
+    try:
+        total_records = 0
+        origin_urls = []
+
+        def set_total_records(num_records: int):
+            nonlocal total_records
+            total_records = num_records
+
+        def set_origin_urls(urls: List[str]):
+            nonlocal origin_urls
+            origin_urls = urls
+
+        return {
+            "records": [
+                {**record.dict(), "ark": record.ark}
+                for record in await get_documents_with_occurrences(
+                    args=ContextSearchArgs(
+                        start_date=date_params["start_date"],
+                        end_date=date_params["end_date"],
+                        terms=terms,
+                        codes=codes,
+                        cursor=cursor,
+                        limit=limit,
+                        link_term=link_term,
+                        link_distance=link_distance,
+                        source=source,
+                        sort=sort,
+                    ),
+                    on_get_total_records=set_total_records,
+                    on_get_origin_urls=set_origin_urls,
+                    session=session,
+                )
+            ],
+            "total_records": total_records,
+            "origin_urls": origin_urls,
+        }
+    except (
+        aiohttp.client_exceptions.ClientConnectorError,
+        aiohttp.client_exceptions.ClientConnectionError,
+    ):
+        raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
+
+
 @app.get("/api/gallicaRecords")
 async def fetch_records_from_gallica(
     terms: List[str] = Query(),
@@ -400,12 +480,11 @@ async def fetch_records_from_gallica(
                     **props, context_source=get_sample_context_in_documents
                 )
             ]
-        item = UserResponse(
+        return UserResponse(
             records=records,
             num_results=total_records,
             origin_urls=origin_urls,
         )
-        return item
 
     except (
         aiohttp.client_exceptions.ClientConnectorError,
@@ -527,7 +606,7 @@ async def get_context_include_full_page(
     return list(gallica_records.values())
 
 
-def parse_spans_to_rows(spans: ResultSet[Any], record: VolumeRecord):
+def parse_spans_to_rows(spans: ResultSet[Any], terms: List[str]):
     """Gallica returns a blob of context for each page, this function splits the blob into a row for each occurrence."""
     rows: List[ContextRow] = []
 
@@ -554,14 +633,14 @@ def parse_spans_to_rows(spans: ResultSet[Any], record: VolumeRecord):
 
             # check if gallica has made an erroneous (..) split in the middle of our pivot, only for requests with any multi-word terms
             if (
-                any(len(term.split(" ")) > 1 for term in record.terms)
+                any(len(term.split(" ")) > 1 for term in terms)
                 and i < len(spans) - 1
                 and closest_right_text == ""
             ):
                 next_pivot = spans[i + 1].text
                 if any(
                     f'"{pivot} {next_pivot}"'.casefold() == term.casefold()
-                    for term in record.terms
+                    for term in terms
                 ):
                     pivot = f"{pivot} {next_pivot}"
                     new_right_context = spans[i + 1].next_sibling
@@ -594,7 +673,7 @@ def build_row_record_from_ContentSearch_response(
         if spans:
             page_rows = parse_spans_to_rows(
                 spans=spans,
-                record=record,
+                terms=record.terms,
             )
             for row in page_rows:
                 row.page_url = f"{record.url}/f{page.page_num}.image.r={row.pivot}"
@@ -612,7 +691,7 @@ def parse_rows_from_sample_context(record: VolumeRecord, extract: ExtractRoot):
         soup = BeautifulSoup(text, "html.parser")
         spans = soup.find_all("mark")
         if spans:
-            page_rows = parse_spans_to_rows(spans, record)
+            page_rows = parse_spans_to_rows(spans, terms=record.terms)
             for row in page_rows:
                 row.page_url = snippet.value.url
                 row.page_num = snippet.value.page_num
