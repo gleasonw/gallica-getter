@@ -11,13 +11,14 @@ class Date:
     def __init__(self, dateText):
         dateText = str(dateText)
         self.date = ["", "", ""]
+        self.dateText = dateText
         for dateFormat in Date.dateFormats:
             if dateFormat.match(dateText):
                 for index, entry in enumerate(dateText.split("-")):
                     self.date[index] = entry
 
     def __repr__(self):
-        return f"Date({self.date})"
+        return self.dateText
 
     @property
     def year(self) -> str:
