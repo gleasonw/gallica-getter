@@ -11,6 +11,7 @@ from gallicaGetter.contextSnippets import (
     ContextSnippets,
     ExtractRoot,
 )
+from gallicaGetter.mostFrequent import get_gallica_core
 from gallicaGetter.fetch import APIRequest, fetch_queries_concurrently
 from gallicaGetter.imageSnippet import ImageQuery, ImageSnippet
 from gallicaGetter.pageText import PageQuery, PageText
@@ -27,6 +28,7 @@ from gallicaGetter.utils.parse_xml import (
     get_records_from_xml,
 )
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
+from pydantic import BaseModel
 
 from models import (
     ContextRow,
@@ -98,7 +100,6 @@ async def full_text(ark: str, page: Optional[int] = None):
         page_data = []
         if page is None:
             pagination_data = await Pagination.get(ark=ark, session=gallica_session)
-            print(pagination_data)
             if pagination_data:
                 page_data = [
                     page
@@ -326,6 +327,37 @@ async def fetch_volume_context(ark: str, term: str):
                     row.page_num = page.page_num
                     rows.append(row)
         return rows
+
+
+@app.get("/api/pagination")
+async def pagination(
+    ark: str,
+    session: aiohttp.ClientSession = Depends(session),
+):
+    return await Pagination.get(ark=ark, session=session)
+
+
+@app.get("/api/mostTermsAtTime")
+async def most_terms_at_time(
+    term: str,
+    year: int,
+    month: int | None = None,
+    max_n: int = 1,
+    session: aiohttp.ClientSession = Depends(session),
+    sample_size: int = 50,
+):
+    counts = await get_gallica_core(
+        root_gram=term,
+        max_n=max_n,
+        start_date=make_date_from_year_mon_day(year=year, month=month),
+        session=session,
+        sample_size=sample_size,
+    )
+    return sorted(
+        [(term, count) for term, count in counts.items()],
+        key=lambda x: x[1],
+        reverse=True,
+    )
 
 
 @app.get("/api/sru")

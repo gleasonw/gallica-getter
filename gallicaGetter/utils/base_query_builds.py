@@ -24,7 +24,9 @@ def build_base_queries(
         for code_bundle in bundle_codes(args.codes):
             if type(args.start_index) is int:
                 cursor = [args.start_index]
-            for c in cursor:  # type: ignore
+            else:
+                cursor = args.start_index
+            for c in cursor:
                 base_queries.append(
                     VolumeQuery(
                         terms=args.terms,
