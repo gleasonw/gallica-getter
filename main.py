@@ -357,7 +357,7 @@ async def most_terms_at_time(
         [(term, count) for term, count in counts.items()],
         key=lambda x: x[1],
         reverse=True,
-    )
+    )[0:20]
 
 
 @app.get("/api/sru")
