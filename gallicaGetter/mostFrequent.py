@@ -45,7 +45,10 @@ async def get_gallica_core(
     num_volumes = sum(
         query.gallica_results_for_params for query in num_volumes_with_root_gram
     )
-    indices_to_sample = random.sample(range(num_volumes), sample_size)
+    corrected_sample_size = min(sample_size, num_volumes)
+    if corrected_sample_size == 0:
+        return {}
+    indices_to_sample = random.sample(range(num_volumes), corrected_sample_size)
     volumes_with_root_gram = await VolumeOccurrence.get(
         OccurrenceArgs(
             terms=[root_gram],
