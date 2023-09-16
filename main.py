@@ -141,7 +141,7 @@ async def top(
     lock: asyncio.Lock = Depends(get_lock),
     session: aiohttp.ClientSession = Depends(session),
 ):
-    # have to lock this route because it's the most intensive on Gallica's servers...
+    # have to lock this route because it's the most intense on Gallica's servers...
 
     async with lock:
         try:
@@ -197,7 +197,7 @@ async def top(
                 items.sort(key=lambda x: x.count, reverse=True)
                 return items[:limit]
 
-            item = {
+            return {
                 "top_papers": sort_by_count_and_return_top_limit(top_papers),
                 "top_cities": sort_by_count_and_return_top_limit(top_cities),
             }
