@@ -1,6 +1,6 @@
 # gallica-getter
 
-Find documents where a word occurs, context for the occurrence, full text for OCR document pages. Compose Gallica services using Python classes that represent each service.
+Find documents where a word occurs, context for the occurrence, full text for OCR document pages. Compose Gallica services with service-specific classes.
 
 Alongside Gallica wrappers, this project contains a JSON API. Deploy this API anywhere. Railway, Google App Engine, AWS, Fly.io, a Raspberry PI.
 
@@ -41,5 +41,5 @@ http://localhost:8000/api/gallicaRecords?terms=portland&source=periodical&link_t
 An end-end test suite calls each Gallica wrapper endpoint and verifies the result.
 
 ```
-python -m pytest gallicaGetter/tests/test_gallicaWrapper.py
+python -m pytest gallicaGetter/tests/gallicaE2E.py
 ```

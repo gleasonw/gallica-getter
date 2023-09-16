@@ -15,13 +15,12 @@ from models import OccurrenceArgs
 @pytest.mark.asyncio
 async def test_pagination():
     async with aiohttp.ClientSession() as session:
-        records = Pagination.get("bpt6k607811b", session=session)
-        list_records = [record async for record in records]
-        first = list_records[0]
-        assert first.ark == "bpt6k607811b"
-        assert first.page_count == 4
-        assert first.has_content == True
-        assert first.has_toc == False
+        pagination = await Pagination.get("bpt6k607811b", session=session)
+        assert pagination
+        assert pagination.ark == "bpt6k607811b"
+        assert pagination.page_count == 4
+        assert pagination.has_content == True
+        assert pagination.has_toc == False
 
 
 @pytest.mark.asyncio

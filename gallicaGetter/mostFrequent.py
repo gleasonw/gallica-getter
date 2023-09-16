@@ -1,7 +1,7 @@
+import re
 from typing import Dict, List
 from io import StringIO
 import random
-from collections import Counter
 import aiohttp
 from bs4 import BeautifulSoup
 import os
@@ -23,8 +23,9 @@ with open(os.path.join(here, "utils/stopwordsEN.txt"), "r") as stopwords_file:
 async def get_gallica_core(
     root_gram: str,
     start_date: str,
-    end_date: str,
+    max_n: int,
     session: aiohttp.ClientSession,
+    end_date: str | None = None,
     sample_size: int = 50,
 ) -> Dict[str, int]:
     """An experimental tool that returns the most frequent words in the surrounding context of a target word occurrence."""
@@ -44,7 +45,10 @@ async def get_gallica_core(
     num_volumes = sum(
         query.gallica_results_for_params for query in num_volumes_with_root_gram
     )
-    indices_to_sample = random.sample(range(num_volumes), sample_size)
+    corrected_sample_size = min(sample_size, num_volumes)
+    if corrected_sample_size == 0:
+        return {}
+    indices_to_sample = random.sample(range(num_volumes), corrected_sample_size)
     volumes_with_root_gram = await VolumeOccurrence.get(
         OccurrenceArgs(
             terms=[root_gram],
@@ -62,8 +66,21 @@ async def get_gallica_core(
             codes=volume_codes, target_word=root_gram, session=session
         )
     )
-    notable_words_in_distance = get_associated_words(text_to_analyze, root_gram)
-    return notable_words_in_distance
+    lower_text_string = text_to_analyze.read().lower()
+    lower_text_array = re.findall(r"\b[a-zA-Z'àâéèêëîïôûùüç-]+\b", lower_text_string)
+    root_grams = set(root_gram.split())
+    filtered_array = []
+    for i in range(len(lower_text_array)):
+        word = lower_text_array[i]
+        if word not in stopwords_fr | stopwords_en | root_grams:
+            filtered_array.append(word)
+    counts = {}
+    for i in range(len(filtered_array)):
+        for j in range(1, max_n + 1):
+            if i + j <= len(filtered_array):
+                word = " ".join(filtered_array[i : i + j])
+                counts[word] = counts.get(word, 0) + 1
+    return counts
 
 
 async def get_text_for_codes(
@@ -78,14 +95,3 @@ async def get_text_for_codes(
             soup = BeautifulSoup(page.context, "html.parser")
             text += soup.get_text()
     return text
-
-
-def get_associated_words(text_to_analyze: StringIO, root_gram: str) -> Dict[str, int]:
-    counts = Counter(text_to_analyze.read().split())
-    counts = {k.lower(): v for k, v in counts.items()}
-    for stopword in stopwords_fr | stopwords_en:
-        counts.pop(stopword, None)
-    counts = {k: v for k, v in counts.items() if k.isalnum()}
-    for word in root_gram.split():
-        counts.pop(word, None)
-    return counts
