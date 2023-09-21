@@ -26,6 +26,7 @@ from gallicaGetter.utils.parse_xml import (
 from typing import Any, Callable, Generator, List, Optional
 
 from models import OccurrenceArgs
+from datetime import datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,10 +35,10 @@ class VolumeRecord:
     paper_code: str
     ocr_quality: float
     author: str
-    publisher: Optional[str]
     url: str
-    date: Date
+    date: str
     terms: List[str]
+    publisher: Optional[str] = None
 
     @property
     def ark(self) -> str:

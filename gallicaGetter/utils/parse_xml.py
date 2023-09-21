@@ -1,5 +1,4 @@
 from lxml import etree
-from gallicaGetter.utils.date import Date
 from typing import List, Tuple
 import re
 
@@ -114,12 +113,12 @@ def get_paper_title_from_record_xml(record) -> str:
     return paper_title
 
 
-def get_date_from_record_xml(record) -> Date:
+def get_date_from_record_xml(record) -> str:
     xml = get_data_from_record_root(record)
     date_element = xml.find("{http://purl.org/dc/elements/1.1/}date")
     if date_element is not None:
-        return Date(date_element.text)
-    return Date("")
+        return date_element.text
+    return ""
 
 
 def get_author_from_record_xml(record) -> str:

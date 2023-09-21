@@ -4,7 +4,7 @@ import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
-from typing import Any, Callable, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 from gallicaGetter.context import Context, HTMLContext
 from gallicaGetter.contextSnippets import (
     ContextSnippetQuery,
@@ -18,7 +18,7 @@ from gallicaGetter.pageText import PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
-from gallicaGetter.pagination import Pagination
+from gallicaGetter.pagination import Pagination, PaginationData
 from gallicaGetter.queries import ContentQuery, VolumeQuery
 from gallicaGetter.utils.parse_xml import (
     get_decollapsing_data_from_gallica_xml,
@@ -133,6 +133,11 @@ def get_lock():
     return top_paper_lock
 
 
+class TopResponse(BaseModel):
+    top_papers: List[TopPaper]
+    top_cities: List[TopCity]
+
+
 @app.get("/api/top")
 async def top(
     term: List[str] = Query(...),
@@ -140,7 +145,7 @@ async def top(
     date_params: dict = Depends(date_params),
     lock: asyncio.Lock = Depends(get_lock),
     session: aiohttp.ClientSession = Depends(session),
-):
+) -> TopResponse:
     # have to lock this route because it's the most intense on Gallica's servers...
 
     async with lock:
@@ -197,13 +202,13 @@ async def top(
                 items.sort(key=lambda x: x.count, reverse=True)
                 return items[:limit]
 
-            return {
-                "top_papers": sort_by_count_and_return_top_limit(top_papers),
-                "top_cities": sort_by_count_and_return_top_limit(top_cities),
-            }
+            return TopResponse(
+                top_papers=sort_by_count_and_return_top_limit(top_papers),
+                top_cities=sort_by_count_and_return_top_limit(top_cities),
+            )
 
         except aiohttp.client_exceptions.ClientConnectorError as e:
-            return HTTPException(status_code=503, detail=e.strerror)
+            raise HTTPException(status_code=503, detail=e.strerror)
 
 
 async def sum_by_paper_query(
@@ -283,8 +288,15 @@ async def sum_by_record(
     return list(top_papers.values()), list(top_cities.values())
 
 
+class ImageResponse(BaseModel):
+    image: str
+    ark: str
+    page: int
+    term: str
+
+
 @app.get("/api/image")
-async def image_snippet(ark: str, term: str, page: int):
+async def image_snippet(ark: str, term: str, page: int) -> ImageResponse:
     async with aiohttp.ClientSession() as session:
         images = [
             image
@@ -295,17 +307,16 @@ async def image_snippet(ark: str, term: str, page: int):
         if images is None or len(images) == 0:
             raise HTTPException(status_code=404, detail="Image not found")
         image = images[0]
-        response = {
-            "image": image.image,
-            "ark": image.ark,
-            "page": image.page,
-            "term": image.term,
-        }
-        return response
+        return ImageResponse(
+            image=image.image,
+            ark=image.ark,
+            page=image.page,
+            term=image.term,
+        )
 
 
 @app.get("/api/volume")
-async def fetch_volume_context(ark: str, term: str):
+async def fetch_volume_context(ark: str, term: str) -> List[ContextRow]:
     async with aiohttp.ClientSession() as session:
         data = [
             context
@@ -314,7 +325,7 @@ async def fetch_volume_context(ark: str, term: str):
                 session=session,
             )
         ][0]
-        rows = []
+        rows: List[ContextRow] = []
         for page in data.pages:
             soup = BeautifulSoup(page.context, "html.parser")
             spans = soup.find_all("span", {"class": "highlight"})
@@ -333,7 +344,7 @@ async def fetch_volume_context(ark: str, term: str):
 async def pagination(
     ark: str,
     session: aiohttp.ClientSession = Depends(session),
-):
+) -> PaginationData | None:
     return await Pagination.get(ark=ark, session=session)
 
 
@@ -345,7 +356,7 @@ async def most_terms_at_time(
     max_n: int = 1,
     session: aiohttp.ClientSession = Depends(session),
     sample_size: int = 50,
-):
+) -> List[Tuple[str, int]]:
     counts = await get_gallica_core(
         root_gram=term,
         max_n=max_n,
@@ -360,8 +371,13 @@ async def most_terms_at_time(
     )[0:20]
 
 
-@app.get("/api/sru")
-async def fetch_sru(
+class SRUResponse(BaseModel):
+    records: List[VolumeRecord]
+    total_records: int
+    origin_urls: List[str]
+
+
+async def sru_params(
     terms: List[str] = Query(),
     codes: Optional[List[str]] = Query(None),
     cursor: Optional[int] = 0,
@@ -371,8 +387,26 @@ async def fetch_sru(
     link_distance: Optional[int] = 0,
     source: Literal["book", "periodical", "all"] = "all",
     sort: Literal["date", "relevance"] = "relevance",
-    session: aiohttp.ClientSession = Depends(session),
 ):
+    return ContextSearchArgs(
+        start_date=date_params["start_date"],
+        end_date=date_params["end_date"],
+        terms=terms,
+        codes=codes,
+        cursor=cursor,
+        limit=limit,
+        link_term=link_term,
+        link_distance=link_distance,
+        source=source,
+        sort=sort,
+    )
+
+
+@app.get("/api/sru")
+async def fetch_sru(
+    args: ContextSearchArgs = Depends(sru_params),
+    session: aiohttp.ClientSession = Depends(session),
+) -> SRUResponse:
     try:
         total_records = 0
         origin_urls = []
@@ -385,30 +419,19 @@ async def fetch_sru(
             nonlocal origin_urls
             origin_urls = urls
 
-        return {
-            "records": [
+        return SRUResponse(
+            records=[
                 {**record.dict(), "ark": record.ark}
                 for record in await get_documents_with_occurrences(
-                    args=ContextSearchArgs(
-                        start_date=date_params["start_date"],
-                        end_date=date_params["end_date"],
-                        terms=terms,
-                        codes=codes,
-                        cursor=cursor,
-                        limit=limit,
-                        link_term=link_term,
-                        link_distance=link_distance,
-                        source=source,
-                        sort=sort,
-                    ),
+                    args=args,
                     on_get_total_records=set_total_records,
                     on_get_origin_urls=set_origin_urls,
                     session=session,
                 )
             ],
-            "total_records": total_records,
-            "origin_urls": origin_urls,
-        }
+            total_records=total_records,
+            origin_urls=origin_urls,
+        )
     except (
         aiohttp.client_exceptions.ClientConnectorError,
         aiohttp.client_exceptions.ClientConnectionError,
@@ -416,25 +439,19 @@ async def fetch_sru(
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
+class RowRecordResponse(BaseModel):
+    records: List[GallicaRowContext]
+    num_results: int
+    origin_urls: List[str]
+
+
 @app.get("/api/gallicaRecords")
 async def fetch_records_from_gallica(
-    terms: List[str] = Query(),
-    codes: Optional[List[str]] = Query(None),
-    cursor: Optional[int] = 0,
-    date_params: dict = Depends(date_params),
-    limit: Optional[int] = 10,
-    link_term: Optional[str] = None,
-    link_distance: Optional[int] = 0,
-    source: Literal["book", "periodical", "all"] = "all",
-    sort: Literal["date", "relevance"] = "relevance",
-    row_split: Optional[bool] = False,
-    include_page_text: Optional[bool] = False,
+    args: ContextSearchArgs = Depends(sru_params),
     all_context: Optional[bool] = False,
     session: aiohttp.ClientSession = Depends(session),
-):
-    """API endpoint for the context table. To fetch multiple terms linked with OR in the Gallica CQL, pass multiple terms parameters: /api/gallicaRecords?terms=term1&terms=term2&terms=term3"""
-
-    if limit and limit > 50:
+) -> RowRecordResponse:
+    if args.limit and args.limit > 50:
         raise HTTPException(
             status_code=400,
             detail="Limit must be less than or equal to 50, the maximum number of records for one request to Gallica.",
@@ -455,18 +472,7 @@ async def fetch_records_from_gallica(
         keyed_docs = {
             record.ark: record
             for record in await get_documents_with_occurrences(
-                args=ContextSearchArgs(
-                    start_date=date_params["start_date"],
-                    end_date=date_params["end_date"],
-                    terms=terms,
-                    codes=codes,
-                    cursor=cursor,
-                    limit=limit,
-                    link_term=link_term,
-                    link_distance=link_distance,
-                    source=source,
-                    sort=sort,
-                ),
+                args=args,
                 on_get_total_records=set_total_records,
                 on_get_origin_urls=set_origin_urls,
                 session=session,
@@ -478,16 +484,7 @@ async def fetch_records_from_gallica(
             "keyed_docs": keyed_docs,
         }
 
-        if include_page_text and all_context:
-            records = await get_context_include_full_page(
-                **props,
-                context_source=get_all_context_in_documents,
-            )
-        elif include_page_text:
-            records = await get_context_include_full_page(
-                **props, context_source=get_sample_context_in_documents
-            )
-        elif row_split and all_context:
+        if all_context:
             records = [
                 record
                 async for record in get_context_parse_by_row(
@@ -496,23 +493,9 @@ async def fetch_records_from_gallica(
                     row_splitter=build_row_record_from_ContentSearch_response,
                 )
             ]
-        elif row_split:
-            records = [record async for record in get_sample_context_by_row(**props)]
-        elif all_context:
-            records = [
-                record
-                async for record in get_raw_context(
-                    **props, context_source=get_all_context_in_documents
-                )
-            ]
         else:
-            records = [
-                record
-                async for record in get_raw_context(
-                    **props, context_source=get_sample_context_in_documents
-                )
-            ]
-        return UserResponse(
+            records = [record async for record in get_sample_context_by_row(**props)]
+        return RowRecordResponse(
             records=records,
             num_results=total_records,
             origin_urls=origin_urls,
@@ -594,48 +577,6 @@ async def get_raw_context(
     ):
         record = keyed_docs[context_response.ark]
         yield GallicaPageContext(**record.dict(), context=context_response)
-
-
-async def get_context_include_full_page(
-    keyed_docs: Dict[str, VolumeRecord],
-    session: aiohttp.ClientSession,
-    context_source: Callable,
-):
-    """Queries Context and PageText to get the text of each page a term occurs on."""
-    page_text_wrapper = PageText()
-    queries: List[PageQuery] = []
-
-    # build records to be filled with page text for each page w/occurrence
-    gallica_records: Dict[str, GallicaRecordFullPageText] = {
-        record.ark: GallicaRecordFullPageText(**record.dict(), context=[])
-        for record in keyed_docs.values()
-    }
-
-    for context_response in await context_source(
-        records=list(keyed_docs.values()), session=session
-    ):
-        record = keyed_docs[context_response.ark]
-        for page in context_response.pages:
-            if page.page_num is None:
-                continue
-            queries.append(
-                PageQuery(
-                    ark=record.ark,
-                    page_num=int(page.page_num),
-                )
-            )
-    async for occurrence_page in PageText.get(page_queries=queries, session=session):
-        record = gallica_records[occurrence_page.ark]
-        terms_string = " ".join(record.terms)
-
-        record.context.append(
-            OCRPage(
-                page_num=occurrence_page.page_num,
-                text=occurrence_page.text,
-                page_url=f"{record.url}/f{occurrence_page.page_num}.image.r={terms_string}",
-            )
-        )
-    return list(gallica_records.values())
 
 
 def parse_spans_to_rows(spans: ResultSet[Any], terms: List[str]):
