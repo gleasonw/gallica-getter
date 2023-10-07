@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from io import StringIO
 import os
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
@@ -29,6 +30,8 @@ from gallicaGetter.utils.parse_xml import (
 )
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from pydantic import BaseModel
+import pandas as pd
+import datetime
 
 from models import (
     ContextRow,
@@ -722,6 +725,94 @@ def make_date_from_year_mon_day(
         return f"{year}"
     else:
         return ""
+    
+
+class Series(BaseModel):
+    data: List[Tuple[int, float]]
+    name: str
+
+
+@app.get("/series")
+async def get(
+    term: str,
+    start_date: Optional[int] = None,
+    end_date: Optional[int] = None,
+    grouping: Literal["mois", "annee"] = "mois",
+    source: Literal["livres", "presse", "lemonde"] = "presse",
+    link_term: Optional[str] = None,
+):
+    debut = start_date or 1789
+    fin = end_date or 1950
+    if link_term:
+        response = await fetch_from_gallicagram(
+            "https://shiny.ens-paris-saclay.fr/guni/contain",
+            {
+                "corpus": source,
+                "mot1": term.lower(),
+                "mot2": link_term.lower(),
+                "from": debut,
+                "to": fin,
+            },
+        )
+    else:
+        response = await fetch_from_gallicagram(
+            "https://shiny.ens-paris-saclay.fr/guni/query",
+            {
+                "corpus": source,
+                "mot": term.lower(),
+                "from": debut,
+                "to": fin,
+            },
+        )
+
+    df = pd.read_csv(StringIO(await response.text()))
+    if grouping == "mois" and source != "livres":
+        df = (
+            df.groupby(["annee", "mois", "gram"])
+            .agg({"n": "sum", "total": "sum"})
+            .reset_index()
+        )
+    if grouping == "annee":
+        df = (
+            df.groupby(["annee", "gram"])
+            .agg({"n": "sum", "total": "sum"})
+            .reset_index()
+        )
+
+    def calc_ratio(row):
+        if row.total == 0:
+            return 0
+        return row.n / row.total
+
+    df["ratio"] = df.apply(lambda row: calc_ratio(row), axis=1)
+    if all(df.ratio == 0):
+        raise HTTPException(status_code=404, detail="No records found")
+
+    def get_unix_timestamp(row) -> int:
+        year = int(row.get("annee", 0))
+        month = int(row.get("mois", 0)) - 1 if row.get("mois") else 0
+
+        dt = datetime(year, month + 1, 1) if month >= 0 else datetime(year, 1, 1)
+        return int((dt - datetime(1970, 1, 1)).total_seconds())
+
+    data = df.apply(
+        lambda row: (get_unix_timestamp(row), row["ratio"]), axis=1
+    ).tolist()
+
+    return Series(
+        data=data,
+        name=term,
+    )
+
+
+async def fetch_from_gallicagram(url: str, params: Dict):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as response:
+            if response.status != 200:
+                raise HTTPException(
+                    status_code=503, detail="Could not connect to Gallicagram! Egads!"
+                )
+            return response
 
 
 if __name__ == "__main__":
