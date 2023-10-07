@@ -31,7 +31,7 @@ from gallicaGetter.utils.parse_xml import (
 from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from pydantic import BaseModel
 import pandas as pd
-import datetime
+from datetime import datetime
 
 from models import (
     ContextRow,
@@ -318,31 +318,6 @@ async def image_snippet(ark: str, term: str, page: int) -> ImageResponse:
         )
 
 
-@app.get("/api/volume")
-async def fetch_volume_context(ark: str, term: str) -> List[ContextRow]:
-    async with aiohttp.ClientSession() as session:
-        data = [
-            context
-            async for context in Context.get(
-                queries=[ContentQuery(ark=ark, terms=[term])],
-                session=session,
-            )
-        ][0]
-        rows: List[ContextRow] = []
-        for page in data.pages:
-            soup = BeautifulSoup(page.context, "html.parser")
-            spans = soup.find_all("span", {"class": "highlight"})
-            if spans:
-                page_rows = parse_spans_to_rows(
-                    spans=spans,
-                    terms=[term],
-                )
-                for row in page_rows:
-                    row.page_num = page.page_num
-                    rows.append(row)
-        return rows
-
-
 @app.get("/api/pagination")
 async def pagination(
     ark: str,
@@ -403,43 +378,6 @@ async def sru_params(
         source=source,
         sort=sort,
     )
-
-
-@app.get("/api/sru")
-async def fetch_sru(
-    args: ContextSearchArgs = Depends(sru_params),
-    session: aiohttp.ClientSession = Depends(session),
-) -> SRUResponse:
-    try:
-        total_records = 0
-        origin_urls = []
-
-        def set_total_records(num_records: int):
-            nonlocal total_records
-            total_records = num_records
-
-        def set_origin_urls(urls: List[str]):
-            nonlocal origin_urls
-            origin_urls = urls
-
-        return SRUResponse(
-            records=[
-                {**record.dict(), "ark": record.ark}
-                for record in await get_documents_with_occurrences(
-                    args=args,
-                    on_get_total_records=set_total_records,
-                    on_get_origin_urls=set_origin_urls,
-                    session=session,
-                )
-            ],
-            total_records=total_records,
-            origin_urls=origin_urls,
-        )
-    except (
-        aiohttp.client_exceptions.ClientConnectorError,
-        aiohttp.client_exceptions.ClientConnectionError,
-    ):
-        raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
 
 class RowRecordResponse(BaseModel):
@@ -725,7 +663,7 @@ def make_date_from_year_mon_day(
         return f"{year}"
     else:
         return ""
-    
+
 
 class Series(BaseModel):
     data: List[Tuple[int, float]]
@@ -744,7 +682,7 @@ async def get(
     debut = start_date or 1789
     fin = end_date or 1950
     if link_term:
-        response = await fetch_from_gallicagram(
+        series_dataframe = await fetch_series_dataframe(
             "https://shiny.ens-paris-saclay.fr/guni/contain",
             {
                 "corpus": source,
@@ -755,7 +693,7 @@ async def get(
             },
         )
     else:
-        response = await fetch_from_gallicagram(
+        series_dataframe = await fetch_series_dataframe(
             "https://shiny.ens-paris-saclay.fr/guni/query",
             {
                 "corpus": source,
@@ -765,16 +703,15 @@ async def get(
             },
         )
 
-    df = pd.read_csv(StringIO(await response.text()))
     if grouping == "mois" and source != "livres":
-        df = (
-            df.groupby(["annee", "mois", "gram"])
+        series_dataframe = (
+            series_dataframe.groupby(["annee", "mois", "gram"])
             .agg({"n": "sum", "total": "sum"})
             .reset_index()
         )
     if grouping == "annee":
-        df = (
-            df.groupby(["annee", "gram"])
+        series_dataframe = (
+            series_dataframe.groupby(["annee", "gram"])
             .agg({"n": "sum", "total": "sum"})
             .reset_index()
         )
@@ -784,8 +721,10 @@ async def get(
             return 0
         return row.n / row.total
 
-    df["ratio"] = df.apply(lambda row: calc_ratio(row), axis=1)
-    if all(df.ratio == 0):
+    series_dataframe["ratio"] = series_dataframe.apply(
+        lambda row: calc_ratio(row), axis=1
+    )
+    if all(series_dataframe.ratio == 0):
         raise HTTPException(status_code=404, detail="No records found")
 
     def get_unix_timestamp(row) -> int:
@@ -795,7 +734,7 @@ async def get(
         dt = datetime(year, month + 1, 1) if month >= 0 else datetime(year, 1, 1)
         return int((dt - datetime(1970, 1, 1)).total_seconds())
 
-    data = df.apply(
+    data = series_dataframe.apply(
         lambda row: (get_unix_timestamp(row), row["ratio"]), axis=1
     ).tolist()
 
@@ -805,14 +744,14 @@ async def get(
     )
 
 
-async def fetch_from_gallicagram(url: str, params: Dict):
+async def fetch_series_dataframe(url: str, params: Dict):
     async with aiohttp.ClientSession() as session:
         async with session.get(url, params=params) as response:
             if response.status != 200:
                 raise HTTPException(
                     status_code=503, detail="Could not connect to Gallicagram! Egads!"
                 )
-            return response
+            return pd.read_csv(StringIO(await response.text()))
 
 
 if __name__ == "__main__":
