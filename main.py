@@ -732,7 +732,7 @@ class Series(BaseModel):
     name: str
 
 
-@app.get("/series")
+@app.get("/api/series")
 async def get(
     term: str,
     start_date: Optional[int] = None,
