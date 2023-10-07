@@ -740,7 +740,7 @@ async def get(
     grouping: Literal["mois", "annee"] = "mois",
     source: Literal["livres", "presse", "lemonde"] = "presse",
     link_term: Optional[str] = None,
-):
+) -> Series:
     debut = start_date or 1789
     fin = end_date or 1950
     if link_term:
