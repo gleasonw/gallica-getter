@@ -670,6 +670,9 @@ class Series(BaseModel):
     name: str
 
 
+series_cache: Dict[str, Series] = {}
+
+
 @app.get("/api/series")
 async def get(
     term: str,
@@ -679,6 +682,9 @@ async def get(
     source: Literal["livres", "presse", "lemonde"] = "presse",
     link_term: Optional[str] = None,
 ) -> Series:
+    key = f"{term}-{start_date}-{end_date}-{grouping}-{source}-{link_term}"
+    if key in series_cache:
+        return series_cache[key]
     debut = start_date or 1789
     fin = end_date or 1950
     if link_term:
@@ -738,10 +744,12 @@ async def get(
         lambda row: (get_unix_timestamp(row), row["ratio"]), axis=1
     ).tolist()
 
-    return Series(
+    series = Series(
         data=data,
         name=term,
     )
+    series_cache[key] = series
+    return series
 
 
 async def fetch_series_dataframe(url: str, params: Dict):
