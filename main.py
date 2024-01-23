@@ -738,7 +738,7 @@ async def get(
         month = int(row.get("mois", 1))
 
         dt = datetime(year, month, 1)
-        return dt.timestamp()
+        return dt.timestamp() * 1000
 
     data = series_dataframe.apply(
         lambda row: (get_unix_timestamp(row), row["ratio"]), axis=1
