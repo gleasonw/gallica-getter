@@ -754,10 +754,10 @@ async def get(
 
     def get_unix_timestamp(row) -> int:
         year = int(row.get("annee", 0))
-        month = int(row.get("mois", 0)) - 1 if row.get("mois") else 0
+        month = int(row.get("mois", 1))
 
-        dt = datetime(year, month + 1, 1) if month >= 0 else datetime(year, 1, 1)
-        return int((dt - datetime(1970, 1, 1)).total_seconds())
+        dt = datetime(year, month, 1)
+        return dt.timestamp() * 1000
 
     data = series_dataframe.apply(
         lambda row: (get_unix_timestamp(row), row["ratio"]), axis=1
