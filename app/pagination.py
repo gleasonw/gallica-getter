@@ -1,7 +1,5 @@
-import asyncio
-from typing import AsyncGenerator, Generator, List
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
+from app.fetch import fetch_queries_concurrently
 from pydantic import BaseModel
 from lxml import etree
 

@@ -2,16 +2,15 @@ from dataclasses import dataclass
 import urllib.parse
 
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.queries import VolumeQuery
+from app.fetch import fetch_queries_concurrently
+from app.queries import VolumeQuery
 
-from gallicaGetter.utils.base_query_builds import build_base_queries
-from gallicaGetter.utils.index_query_builds import (
+from app.utils.base_query_builds import build_base_queries
+from app.utils.index_query_builds import (
     build_indexed_queries,
     index_queries_by_num_results,
 )
-from gallicaGetter.utils.date import Date
-from gallicaGetter.utils.parse_xml import (
+from app.utils.parse_xml import (
     get_author_from_record_xml,
     get_ocr_quality_from_record_xml,
     get_records_from_xml,
@@ -25,8 +24,7 @@ from gallicaGetter.utils.parse_xml import (
 
 from typing import Any, Callable, Generator, List, Optional
 
-from models import OccurrenceArgs
-from datetime import datetime
+from app.models import OccurrenceArgs
 
 
 @dataclass(frozen=True, slots=True)

@@ -6,45 +6,43 @@ import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
-from gallicaGetter.context import Context, HTMLContext
-from gallicaGetter.contextSnippets import (
+from app.context import Context, HTMLContext
+from app.contextSnippets import (
     ContextSnippetQuery,
     ContextSnippets,
     ExtractRoot,
 )
-from gallicaGetter.mostFrequent import get_gallica_core
-from gallicaGetter.fetch import APIRequest, fetch_queries_concurrently
-from gallicaGetter.imageSnippet import ImageQuery, ImageSnippet
-from gallicaGetter.pageText import PageQuery, PageText
+from app.mostFrequent import get_gallica_core
+from app.fetch import APIRequest, fetch_queries_concurrently
+from app.imageSnippet import ImageQuery, ImageSnippet
+from app.pageText import ConvertedXMLPage, PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
-from gallicaGetter.pagination import Pagination, PaginationData
-from gallicaGetter.queries import ContentQuery, VolumeQuery
-from gallicaGetter.utils.parse_xml import (
+from app.pagination import Pagination, PaginationData
+from app.queries import ContentQuery, VolumeQuery
+from app.utils.parse_xml import (
     get_decollapsing_data_from_gallica_xml,
     get_num_records_from_gallica_xml,
     get_paper_title_from_record_xml,
     get_publisher_from_record_xml,
     get_records_from_xml,
 )
-from gallicaGetter.volumeOccurrence import VolumeOccurrence, VolumeRecord
+from app.mostFrequent import get_sample_text
+from app.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from pydantic import BaseModel
 import pandas as pd
 from datetime import datetime
 
-from models import (
+from app.models import (
     ContextRow,
     ContextSearchArgs,
     GallicaPageContext,
-    GallicaRecordFullPageText,
     GallicaRowContext,
-    OCRPage,
     OccurrenceArgs,
     Paper,
     TopCity,
     TopPaper,
-    UserResponse,
 )
 
 
@@ -97,7 +95,7 @@ def index():
 
 
 @app.get("/api/fullText")
-async def full_text(ark: str, page: Optional[int] = None):
+async def full_text(ark: str, page: Optional[int] = None) -> List[ConvertedXMLPage]:
     """Retrieve the full text of a document page on Gallica."""
     try:
         page_data = []
@@ -384,6 +382,27 @@ class RowRecordResponse(BaseModel):
     records: List[GallicaRowContext]
     num_results: int
     origin_urls: List[str]
+
+
+@app.get("/sample")
+async def sample(
+    term: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    session: aiohttp.ClientSession = Depends(session),
+):
+    sample_text = await get_sample_text(
+        sample_size=50,
+        args=OccurrenceArgs(
+            terms=[term],
+            start_date=start_date,
+            end_date=end_date,
+        ),
+        session=session,
+    )
+    if sample_text is None:
+        raise HTTPException(status_code=404, detail="No records found")
+    return sample_text.read()
 
 
 @app.get("/api/gallicaRecords")
@@ -763,4 +782,5 @@ async def fetch_series_dataframe(url: str, params: Dict):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    print("hi fly")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))

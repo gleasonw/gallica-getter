@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 import random
 import time
-from typing import Any, Callable, Coroutine, Generator, Literal
+from typing import Any, Callable, Generator, Literal
 import aiohttp
 import aiohttp.client_exceptions
 
@@ -68,7 +68,7 @@ async def fetch_queries_concurrently(
     while True:
         # get next request (if one is not already waiting for capacity)
         if next_gallica_request is None:
-            if not queue_of_requests_to_retry.empty():
+            if queue_of_requests_to_retry.qsize() > 0:
                 next_gallica_request = queue_of_requests_to_retry.get_nowait()
             elif more_queries_to_send:
                 try:
@@ -207,6 +207,13 @@ class APIRequest:
                 elapsed_time = time.time() - start_time
                 response_bytes = await response.content.read()
                 if response.status != 200:
+                    if response.status == 500:
+                        print(
+                            f"Request {self.query} failed with status 500. Saving errors: {self.result}"
+                        )
+                        status_tracker.num_tasks_in_progress -= 1
+                        status_tracker.num_tasks_failed += 1
+                        return
                     print(response.status)
                     status_tracker.num_api_errors += 1
                     error = response

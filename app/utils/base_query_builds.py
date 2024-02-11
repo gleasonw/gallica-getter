@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional, Tuple
-from gallicaGetter.utils.date import Date
-from gallicaGetter.queries import VolumeQuery
-from models import OccurrenceArgs
+from app.utils.date import Date
+from app.queries import VolumeQuery
+from app.models import OccurrenceArgs
 
 NUM_CODES_PER_BUNDLE = 10
 

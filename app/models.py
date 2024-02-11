@@ -1,9 +1,9 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Literal
-from gallicaGetter.context import HTMLContext
+from app.context import HTMLContext
 
-from gallicaGetter.contextSnippets import ExtractRoot
-from gallicaGetter.imageSnippet import ImageResponse
+from app.contextSnippets import ExtractRoot
+from app.imageSnippet import ImageResponse
 
 
 class Paper(BaseModel):
@@ -57,11 +57,9 @@ class GallicaRowContext(GallicaRecordBase):
     ocr_quality: float
 
 
-
 class GallicaPageContext(GallicaRecordBase):
     context: HTMLContext | ExtractRoot
     ocr_quality: float
-
 
 
 class GallicaRecordFullPageText(GallicaRecordBase):
@@ -73,11 +71,12 @@ class GallicaImageContext(GallicaRecordBase):
     context: List[ImageResponse]
 
 
-
 class UserResponse(BaseModel):
-    records: List[GallicaRowContext] | List[GallicaPageContext] | List[
-        GallicaRecordFullPageText | List[GallicaImageContext]
-    ]
+    records: (
+        List[GallicaRowContext]
+        | List[GallicaPageContext]
+        | List[GallicaRecordFullPageText | List[GallicaImageContext]]
+    )
     num_results: int
     origin_urls: List[str]
 

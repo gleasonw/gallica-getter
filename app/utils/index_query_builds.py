@@ -2,10 +2,10 @@ import asyncio
 from typing import Callable, List, Optional
 
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.utils.parse_xml import get_num_records_from_gallica_xml
-from gallicaGetter.queries import VolumeQuery
-from gallicaGetter.queries import PaperQuery
+from app.fetch import fetch_queries_concurrently
+from app.utils.parse_xml import get_num_records_from_gallica_xml
+from app.queries import VolumeQuery
+from app.queries import PaperQuery
 
 
 async def build_indexed_queries(

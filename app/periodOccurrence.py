@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.utils.date import Date
-from gallicaGetter.utils.parse_xml import get_num_records_from_gallica_xml
-from gallicaGetter.utils.base_query_builds import build_base_queries
+from app.fetch import fetch_queries_concurrently
+from app.utils.date import Date
+from app.utils.parse_xml import get_num_records_from_gallica_xml
+from app.utils.base_query_builds import build_base_queries
 from typing import AsyncGenerator, Literal
 
-from models import OccurrenceArgs
+from app.models import OccurrenceArgs
 
 
 @dataclass(slots=True)

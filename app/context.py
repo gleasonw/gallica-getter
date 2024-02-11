@@ -1,8 +1,8 @@
 from typing import AsyncGenerator, List
 from pydantic import BaseModel
-from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.queries import ContentQuery
-from gallicaGetter.utils.parse_xml import get_num_results_and_pages_for_context
+from app.fetch import fetch_queries_concurrently
+from app.queries import ContentQuery
+from app.utils.parse_xml import get_num_results_and_pages_for_context
 import aiohttp
 
 

@@ -5,7 +5,7 @@ from typing import AsyncGenerator, List
 import aiohttp
 from pydantic import BaseModel
 import pydantic
-from gallicaGetter.fetch import fetch_queries_concurrently
+from app.fetch import fetch_queries_concurrently
 
 
 @dataclass

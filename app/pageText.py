@@ -1,6 +1,6 @@
 from typing import AsyncGenerator, List, Optional
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
+from app.fetch import fetch_queries_concurrently
 from pydantic import BaseModel
 from lxml import etree
 

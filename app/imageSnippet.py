@@ -2,7 +2,7 @@ import json
 from typing import List, Optional
 import aiohttp
 from pydantic import BaseModel
-from gallicaGetter.fetch import post_queries_concurrently
+from app.fetch import post_queries_concurrently
 
 
 class ImageQuery(BaseModel):

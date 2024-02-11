@@ -2,20 +2,20 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.issues import Issues
-from gallicaGetter.utils.parse_xml import (
+from app.fetch import fetch_queries_concurrently
+from app.issues import Issues
+from app.utils.parse_xml import (
     get_paper_code_from_record_xml,
     get_paper_title_from_record_xml,
     get_records_from_xml,
     get_url_from_record,
 )
-from gallicaGetter.queries import PaperQuery
-from gallicaGetter.utils.base_query_builds import (
+from app.queries import PaperQuery
+from app.utils.base_query_builds import (
     bundle_codes,
     NUM_CODES_PER_BUNDLE,
 )
-from gallicaGetter.utils.index_query_builds import build_indexed_queries
+from app.utils.index_query_builds import build_indexed_queries
 
 
 @dataclass(slots=True)

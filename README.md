@@ -41,5 +41,5 @@ http://localhost:8000/api/gallicaRecords?terms=portland&source=periodical&link_t
 An end-end test suite calls each Gallica wrapper endpoint and verifies the result.
 
 ```
-python -m pytest gallicaGetter/tests/gallicaE2E.py
+python -m pytest app/tests/gallicaE2E.py
 ```

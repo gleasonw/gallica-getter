@@ -1,5 +1,5 @@
 from unittest import TestCase
-from gallicaGetter.utils.base_query_builds import build_date_grouping
+from app.utils.base_query_builds import build_date_grouping
 
 
 class TestDateGrouping(TestCase):

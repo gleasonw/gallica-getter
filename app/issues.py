@@ -1,9 +1,9 @@
 from typing import AsyncGenerator, List
 
 import aiohttp
-from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.queries import IssuesQuery
-from gallicaGetter.utils.parse_xml import get_years_published
+from app.fetch import fetch_queries_concurrently
+from app.queries import IssuesQuery
+from app.utils.parse_xml import get_years_published
 from dataclasses import dataclass
 
 

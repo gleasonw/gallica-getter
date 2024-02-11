@@ -1,7 +1,7 @@
-from gallicaGetter.utils.date import Date
+from app.utils.date import Date
 from gallicaContextSearch import build_row_record
-from gallicaGetter.volumeOccurrence import VolumeRecord
-from gallicaGetter.context import Context, HTMLContext, GallicaPage
+from app.volumeOccurrence import VolumeRecord
+from app.context import Context, HTMLContext, GallicaPage
 import pytest
 
 # https://gallica-grapher-production.up.railway.app/api/gallicaRecords?terms=histoire%20de%20la%20r%C3%A9volution&source=book&sort=relevance&year=1801&row_split=true&cursor=6&limit=1

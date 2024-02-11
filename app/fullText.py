@@ -3,8 +3,8 @@ from typing import AsyncGenerator, List
 import aiohttp
 
 from bs4 import BeautifulSoup
-from gallicaGetter.fetch import fetch_queries_concurrently
-from gallicaGetter.queries import FullTextQuery
+from app.fetch import fetch_queries_concurrently
+from app.queries import FullTextQuery
 
 
 @dataclass(slots=True)

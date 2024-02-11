@@ -1,15 +1,18 @@
+import asyncio
 import aiohttp
 import pytest
-from gallicaGetter.pagination import Pagination
-from gallicaGetter.context import Context
-from gallicaGetter.issues import Issues
-from gallicaGetter.papers import Papers
-from gallicaGetter.queries import ContentQuery
+from app.pagination import Pagination
+from app.context import Context
+from app.issues import Issues
+from app.papers import Papers
+from app.queries import ContentQuery
 
-from gallicaGetter.volumeOccurrence import VolumeOccurrence
-from gallicaGetter.periodOccurrence import PeriodOccurrence
-from gallicaGetter.pageText import PageQuery, PageText
-from models import OccurrenceArgs
+from app.volumeOccurrence import VolumeOccurrence
+from app.periodOccurrence import PeriodOccurrence
+from app.pageText import PageQuery, PageText
+from app.models import OccurrenceArgs
+
+# TODO: add test for malformed query. do we fail gracefully?
 
 
 @pytest.mark.asyncio
@@ -19,7 +22,7 @@ async def test_pagination():
         assert pagination
         assert pagination.ark == "bpt6k607811b"
         assert pagination.page_count == 4
-        assert pagination.has_content == True
+        assert pagination.has_content is True
         assert pagination.has_toc == False
 
 
@@ -34,7 +37,7 @@ async def test_get_page():
         first_record = list_records[0]
         assert first_record.ark == "bpt6k607811b"
         assert first_record.page_num == 1
-        assert type(first_record.text) == str
+        assert isinstance(first_record.text, str)
 
 
 @pytest.mark.asyncio
@@ -50,11 +53,23 @@ async def test_get_page():
             },
             1,
         ),
-        ({"terms": ["vote des femmes"], "start_date": "1848", "end_date": "1848"}, 1),
+        ({"terms": ["vote des femmes"], "start_date": "1848", "end_date": "1848"}, 2),
+        # too many quotes
+        (
+            {
+                "terms": ['""vote des femmes""'],
+                "start_date": "1848",
+                "end_date": "1848",
+            },
+            0,
+        ),
     ],
 )
 async def test_get_volume_occurrences(input, expected_length):
-    records = await VolumeOccurrence.get(OccurrenceArgs(**input), get_all_results=True)
+    async with asyncio.timeout(10):
+        records = await VolumeOccurrence.get(
+            OccurrenceArgs(**input), get_all_results=True
+        )
     list_records = list(records)
     assert len(list_records) == expected_length
 
