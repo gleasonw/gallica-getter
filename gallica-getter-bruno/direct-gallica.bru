@@ -1,0 +1,21 @@
+meta {
+  name: direct-gallica
+  type: http
+  seq: 5
+}
+
+get {
+  url: https://gallica.bnf.fr/SRU?operation=searchRetrieve&exactSearch=True&version=1.2&startRecord=0&maximumRecords=10&collapsing=false&query=%28text+adj+%22brazza%22%29+and+dc.type+all+%22fascicule%22+or+dc.type+all+%22monographie%22
+  body: none
+  auth: none
+}
+
+params:query {
+  operation: searchRetrieve
+  exactSearch: True
+  version: 1.2
+  startRecord: 0
+  maximumRecords: 10
+  collapsing: false
+  query: (text adj "brazza") and dc.type all "fascicule" or dc.type all "monographie"
+}

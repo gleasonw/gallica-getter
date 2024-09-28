@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "gallica-getter",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

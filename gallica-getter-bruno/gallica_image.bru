@@ -1,0 +1,26 @@
+meta {
+  name: gallica_image
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://rapportgallica.bnf.fr/api/snippet
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ark": "bpt6k58069086",
+    "pages": [
+      "1"
+    ],
+    "isPeriodique": true,
+    "query": "(gallica any \"brazza\")"
+  }
+}

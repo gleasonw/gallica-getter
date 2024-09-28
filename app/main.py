@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from io import StringIO
 import os
+import time
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
@@ -33,6 +34,7 @@ from app.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from pydantic import BaseModel
 import pandas as pd
 from datetime import datetime
+import logfire
 
 from app.models import (
     ContextRow,
@@ -45,11 +47,22 @@ from app.models import (
     TopPaper,
 )
 
+import dotenv
+
+dotenv.load_dotenv()
+
+
+logfire.configure(token=os.getenv("LOGFIRE_TOKEN"))
+
 
 MAX_PAPERS_TO_SEARCH = 600
 
 
 gallica_session: aiohttp.ClientSession
+
+# todo
+# setup logfire
+# fix multi-term search for gallicagram
 
 
 @asynccontextmanager
@@ -73,7 +86,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+logfire.instrument_fastapi(app)
 # limit number of requests for routes... top_paper is more intensive
 
 
@@ -122,7 +135,7 @@ async def full_text(ark: str, page: Optional[int] = None) -> List[ConvertedXMLPa
             ]
         if page_data and len(page_data) > 0:
             return page_data
-        return None
+        return []
     except aiohttp.client_exceptions.ClientConnectorError:
         raise HTTPException(status_code=503, detail="Could not connect to Gallica.")
 
@@ -757,7 +770,7 @@ async def get(
         month = int(row.get("mois", 1))
 
         dt = datetime(year, month, 1)
-        return dt.timestamp() * 1000
+        return int(dt.timestamp() * 1000)
 
     data = series_dataframe.apply(
         lambda row: (get_unix_timestamp(row), row["ratio"]), axis=1
@@ -773,7 +786,10 @@ async def get(
 
 async def fetch_series_dataframe(url: str, params: Dict):
     async with aiohttp.ClientSession() as session:
+        start = time.time()
         async with session.get(url, params=params) as response:
+            print(f"Fetched {response.url}")
+            print(f"Took {time.time() - start} seconds")
             if response.status != 200:
                 raise HTTPException(
                     status_code=503, detail="Could not connect to Gallicagram! Egads!"

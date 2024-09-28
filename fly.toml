@@ -1,16 +1,12 @@
-# fly.toml app configuration file generated for gallica-getter on 2024-02-09T20:21:59+01:00
+# fly.toml app configuration file generated for gallica-getter-little-snow-3158 on 2024-03-01T13:00:50+01:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'gallica-getter'
+app = 'gallica-getter-little-snow-3158'
 primary_region = 'cdg'
 
 [build]
-  builder = 'paketobuildpacks/builder:base'
-
-[env]
-  PORT = '8080'
 
 [http_service]
   internal_port = 8080
@@ -21,6 +17,6 @@ primary_region = 'cdg'
   processes = ['app']
 
 [[vm]]
+  memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 1024
