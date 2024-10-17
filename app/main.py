@@ -55,7 +55,7 @@ import dotenv
 dotenv.load_dotenv()
 
 
-# logfire.configure(token=os.getenv("LOGFIRE_TOKEN"))
+logfire.configure(token=os.getenv("LOGFIRE_TOKEN"))
 
 
 MAX_PAPERS_TO_SEARCH = 600
