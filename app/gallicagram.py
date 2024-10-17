@@ -77,13 +77,13 @@ async def do_dataframe_fetch(url: str, params: Dict):
 def transform_series(series_dataframe: pd.DataFrame, input: GallicagramInput):
     if input.grouping == "mois" and input.source != "livres":
         series_dataframe = (
-            series_dataframe.groupby(["annee", "mois", "gram"])
+            series_dataframe.groupby(["annee", "mois"])
             .agg({"n": "sum", "total": "sum"})
             .reset_index()
         )
     if input.grouping == "annee":
         series_dataframe = (
-            series_dataframe.groupby(["annee", "gram"])
+            series_dataframe.groupby(["annee"])
             .agg({"n": "sum", "total": "sum"})
             .reset_index()
         )
@@ -99,12 +99,12 @@ def transform_series(series_dataframe: pd.DataFrame, input: GallicagramInput):
     if all(series_dataframe.ratio == 0):
         raise HTTPException(status_code=404, detail="No occurrences of the term found")
 
-    def get_unix_timestamp(row) -> int:
+    def get_unix_timestamp(row) -> float:
         year = int(row.get("annee", 0))
         month = int(row.get("mois", 1))
 
         dt = datetime(year, month, 1)
-        return int(dt.timestamp() * 1000)
+        return dt.timestamp() * 1000
 
     return series_dataframe.apply(
         lambda row: (get_unix_timestamp(row), row["ratio"]), axis=1

@@ -2,7 +2,12 @@ from lxml import etree
 from typing import List, Tuple
 import re
 
-# TODO: refactor as a dataclass
+namespaces = {
+    "srw": "http://www.loc.gov/zing/srw/",
+    "oai_dc": "http://www.openarchives.org/OAI/2.0/oai_dc/",
+    "dc": "http://purl.org/dc/elements/1.1/",
+    # Add any other namespaces you might need
+}
 
 
 def get_one_paper_from_record_batch(xml: bytes) -> str:
@@ -105,6 +110,20 @@ def get_url_from_record(record) -> str:
         url = url_element.text
         return url
     return ""
+
+
+def get_uri_from_record_xml(record) -> str:
+    try:
+        extra_record_element = record.find("srw:extraRecordData", namespaces=namespaces)
+
+        uri = extra_record_element.findtext("uri")
+
+        if uri is not None:
+            return uri
+        return ""
+    except etree.XMLSyntaxError as e:
+        print(f"XML Syntax Error: {e}")
+        return ""
 
 
 def get_paper_title_from_record_xml(record) -> str:

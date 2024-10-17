@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import urllib.parse
 
 import aiohttp
+from pydantic import BaseModel
 from app.fetch import fetch_queries_concurrently
 from app.queries import VolumeQuery
 
@@ -17,6 +18,7 @@ from app.utils.parse_xml import (
     get_paper_title_from_record_xml,
     get_paper_code_from_record_xml,
     get_date_from_record_xml,
+    get_uri_from_record_xml,
     get_url_from_record,
     get_num_records_from_gallica_xml,
     get_publisher_from_record_xml,
@@ -27,32 +29,16 @@ from typing import Any, Callable, Generator, List, Optional
 from app.models import OccurrenceArgs
 
 
-@dataclass(frozen=True, slots=True)
-class VolumeRecord:
+class VolumeRecord(BaseModel):
     paper_title: str
     paper_code: str
     ocr_quality: float
     author: str
     url: str
     date: str
+    ark: str
     terms: List[str]
     publisher: Optional[str] = None
-
-    @property
-    def ark(self) -> str:
-        return self.url.split("/")[-1]
-
-    def dict(self):
-        return {
-            "paper_title": self.paper_title,
-            "paper_code": self.paper_code,
-            "ocr_quality": self.ocr_quality,
-            "author": self.author,
-            "url": self.url,
-            "date": str(self.date),
-            "terms": self.terms,
-            "ark": self.ark,
-        }
 
 
 class VolumeOccurrence:
@@ -133,6 +119,7 @@ class VolumeOccurrence:
                         paper_title=get_paper_title_from_record_xml(record),
                         paper_code=get_paper_code_from_record_xml(record),
                         date=get_date_from_record_xml(record),
+                        ark=get_uri_from_record_xml(record),
                         url=get_url_from_record(record),
                         author=get_author_from_record_xml(record),
                         publisher=get_publisher_from_record_xml(record),

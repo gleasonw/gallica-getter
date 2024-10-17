@@ -5,11 +5,14 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/gallicaRecords?terms=brazza
+  url: {{baseUrl}}/api/gallicaRecords?terms=brazza&start_date=1789&end_date=1945&limit=10
   body: none
   auth: none
 }
 
 params:query {
   terms: brazza
+  start_date: 1789
+  end_date: 1945
+  limit: 10
 }

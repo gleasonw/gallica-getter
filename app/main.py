@@ -1,12 +1,10 @@
 import asyncio
 from contextlib import asynccontextmanager
-from io import StringIO
 import os
-import time
 import aiohttp.client_exceptions
 from bs4 import BeautifulSoup, ResultSet
 import uvicorn
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, TypedDict
 from app.context import Context, HTMLContext
 from app.contextSnippets import (
     ContextSnippetQuery,
@@ -38,7 +36,6 @@ from app.utils.parse_xml import (
 from app.mostFrequent import get_sample_text
 from app.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from pydantic import BaseModel
-import pandas as pd
 from datetime import datetime
 import logfire
 
@@ -423,6 +420,59 @@ async def sample(
     return sample_text.read()
 
 
+@app.get("/api/occurrences_no_context")
+async def fetch_occurrences_no_context(
+    args: ContextSearchArgs = Depends(sru_params),
+    session: aiohttp.ClientSession = Depends(session),
+) -> SRUResponse:
+    total_records = 0
+    origin_urls = []
+
+    def set_total_records(num_records: int):
+        nonlocal total_records
+        total_records = num_records
+
+    def set_origin_urls(urls: List[str]):
+        nonlocal origin_urls
+        origin_urls = urls
+
+    records = await get_documents_with_occurrences(
+        args=args,
+        on_get_total_records=set_total_records,
+        on_get_origin_urls=set_origin_urls,
+        session=session,
+    )
+
+    return SRUResponse(
+        records=records,
+        total_records=total_records,
+        origin_urls=origin_urls,
+    )
+
+
+@app.get("/api/context")
+async def context(
+    ark: str = Query(),
+    terms: List[str] = Query(),
+    url: str = Query(),
+    session: aiohttp.ClientSession = Depends(session),
+) -> List[ContextRow]:
+    context = Context.get(
+        queries=[ContentQuery(ark=ark, terms=terms)],
+        session=session,
+    )
+    context_unwrapped = [record async for record in context]
+    result = context_unwrapped[0]
+    if result is None:
+        raise HTTPException(status_code=404, detail="No results found")
+    return [
+        row
+        for row in build_row_record_from_ContentSearch_response(
+            record={"url": url, "terms": terms}, context=result
+        )
+    ]
+
+
 @app.get("/api/gallicaRecords")
 async def fetch_records_from_gallica(
     args: ContextSearchArgs = Depends(sru_params),
@@ -615,19 +665,22 @@ def parse_spans_to_rows(spans: ResultSet[Any], terms: List[str]):
     return rows
 
 
-def build_row_record_from_ContentSearch_response(
-    record: VolumeRecord, context: HTMLContext
-):
+class Record(TypedDict):
+    url: str
+    terms: List[str]
+
+
+def build_row_record_from_ContentSearch_response(record: Record, context: HTMLContext):
     for page in context.pages:
         soup = BeautifulSoup(page.context, "html.parser")
         spans = soup.find_all("span", {"class": "highlight"})
         if spans:
             page_rows = parse_spans_to_rows(
                 spans=spans,
-                terms=record.terms,
+                terms=record["terms"],
             )
             for row in page_rows:
-                row.page_url = f"{record.url}/f{page.page_num}.image.r={row.pivot}"
+                row.page_url = f"{record['url']}/f{page.page_num}.image.r={row.pivot}"
                 row.page_num = page.page_num
                 yield row
 
