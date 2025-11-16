@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import json
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Optional
+import urllib.parse
 
 import aiohttp
 from pydantic import BaseModel
@@ -10,8 +11,15 @@ from app.fetch import fetch_queries_concurrently
 
 @dataclass
 class ContextSnippetQuery:
+    """
+    Uses the Gallica ajax service, which has more robust support for link_terms and link_distance than the ContentSearch API.
+    Formerly, it was also helpful in reducing the amount of context returned for a query. Now, it seems like Gallica has added a 10 record limit on ContentSearch API responses,
+    so the "sample context" functionality doesn't really apply anymore. This api is just helpful for link_term and link_distance.
+    """
     ark: str
     term: str
+    link_term: Optional[str] = None
+    link_distance: Optional[int] = None
 
     @property
     def params(self):
@@ -19,7 +27,16 @@ class ContextSnippetQuery:
 
     @property
     def endpoint_url(self):
-        return f"https://gallica.bnf.fr/services/ajax/extract/ark:/12148/{self.ark}.r={self.term}"
+        base = f"https://gallica.bnf.fr/services/ajax/extract/ark:/12148/{self.ark}.r="
+        # Build r= parameter; if link_term and distance provided, use prox expression
+        if self.link_term and self.link_distance is not None:
+            # Format: (prOx: "term" distance "link_term") — keep parentheses unescaped as in observed URLs
+            prox_expr = f"(prOx: \"{self.term}\" {self.link_distance} \"{self.link_term}\")"
+            encoded = urllib.parse.quote(prox_expr, safe="()")
+            return base + encoded
+        # Fallback to simple single-term search
+        encoded_term = urllib.parse.quote(self.term, safe="")
+        return base + encoded_term
 
 
 class Snippet(BaseModel):

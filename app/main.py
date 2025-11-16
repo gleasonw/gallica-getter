@@ -37,7 +37,6 @@ from app.mostFrequent import get_sample_text
 from app.volumeOccurrence import VolumeOccurrence, VolumeRecord
 from pydantic import BaseModel
 from datetime import datetime
-import logfire
 
 from app.models import (
     ContextRow,
@@ -55,16 +54,10 @@ import dotenv
 dotenv.load_dotenv()
 
 
-logfire.configure(token=os.getenv("LOGFIRE_TOKEN"))
-
-
 MAX_PAPERS_TO_SEARCH = 600
 
 
 gallica_session: aiohttp.ClientSession
-
-# todo
-# fix multi-term search for gallicagram
 
 
 @asynccontextmanager
@@ -88,7 +81,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-logfire.instrument_fastapi(app)
 # limit number of requests for routes... top_paper is more intensive
 
 
@@ -512,7 +504,8 @@ async def fetch_records_from_gallica(
             "keyed_docs": keyed_docs,
         }
 
-        if all_context:
+        # If a linked term is provided, prefer the AJAX extract endpoint even if all_context is requested
+        if all_context and args.link_term is None:
             records = [
                 record
                 async for record in get_context_parse_by_row(
@@ -522,7 +515,14 @@ async def fetch_records_from_gallica(
                 )
             ]
         else:
-            records = [record async for record in get_sample_context_by_row(**props)]
+            records = [
+                record
+                async for record in get_sample_context_by_row(
+                    **props,
+                    link_term=args.link_term,
+                    link_distance=args.link_distance,
+                )
+            ]
         return RowRecordResponse(
             records=records,
             num_results=total_records,
@@ -543,10 +543,6 @@ async def get_documents_with_occurrences(
     session: aiohttp.ClientSession,
 ) -> List[VolumeRecord]:
     """Queries Gallica's SRU API to get metadata for a given term in the archive."""
-
-    link = None
-    if args.link_distance and args.link_term:
-        link = (args.link_term, args.link_distance)
 
     # get the volumes in which the term appears
     volume_Gallica_wrapper = VolumeOccurrence()
@@ -574,11 +570,18 @@ async def get_documents_with_occurrences(
 def get_sample_context_by_row(
     keyed_docs: Dict[str, VolumeRecord],
     session: aiohttp.ClientSession,
+    link_term: Optional[str] = None,
+    link_distance: Optional[int] = None,
 ):
     return get_context_parse_by_row(
         session=session,
         keyed_docs=keyed_docs,
-        context_source=get_sample_context_in_documents,
+        context_source=lambda records, session: get_sample_context_in_documents(
+            records=records,
+            session=session,
+            link_term=link_term,
+            link_distance=link_distance,
+        ),
         row_splitter=parse_rows_from_sample_context,
     )
 
@@ -722,6 +725,8 @@ async def get_all_context_in_documents(
 async def get_sample_context_in_documents(
     records: List[VolumeRecord],
     session: aiohttp.ClientSession,
+    link_term: Optional[str] = None,
+    link_distance: Optional[int] = None,
 ) -> List[ExtractRoot]:
     """Queries Gallica's search result API to show a sample of context instead of the entire batch."""
 
@@ -734,7 +739,12 @@ async def get_sample_context_in_documents(
         context
         async for context in ContextSnippets.get(
             queries=[
-                ContextSnippetQuery(ark=record.ark, term=record.terms[0])
+                ContextSnippetQuery(
+                    ark=record.ark,
+                    term=record.terms[0],
+                    link_term=link_term,
+                    link_distance=link_distance,
+                )
                 for record in records
             ],
             session=session,

@@ -40,6 +40,9 @@ class VolumeRecord(BaseModel):
     terms: List[str]
     publisher: Optional[str] = None
 
+    def __getitem__(self, key):
+        return getattr(self, key)
+
 
 class VolumeOccurrence:
     """Fetches occurrence metadata from Gallica's SRU API. There may be many occurrences in one Gallica record."""
