@@ -18,7 +18,7 @@ from app.gallicagram import (
     transform_series,
 )
 from app.mostFrequent import get_gallica_core
-from app.fetch import APIRequest, fetch_queries_concurrently
+from app.fetch import APIRequest, fetch_queries_concurrently, get_gallica_session
 from app.imageSnippet import ImageQuery, ImageSnippet
 from app.pageText import ConvertedXMLPage, PageQuery, PageText
 from fastapi import FastAPI, HTTPException, Query, Depends
@@ -63,7 +63,7 @@ gallica_session: aiohttp.ClientSession
 @asynccontextmanager
 async def gallica_session_lifespan(app: FastAPI):
     global gallica_session
-    gallica_session = aiohttp.ClientSession()
+    gallica_session = get_gallica_session()
     async with gallica_session:
         yield
 
@@ -305,7 +305,7 @@ class ImageResponse(BaseModel):
 
 @app.get("/api/image")
 async def image_snippet(ark: str, term: str, page: int) -> ImageResponse:
-    async with aiohttp.ClientSession() as session:
+    async with get_gallica_session() as session:
         images = [
             image
             async for image in ImageSnippet.get(

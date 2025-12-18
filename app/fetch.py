@@ -7,6 +7,18 @@ import aiohttp
 import aiohttp.client_exceptions
 
 
+def get_gallica_session() -> aiohttp.ClientSession:
+    """Factory function to create an aiohttp ClientSession with browser headers."""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+    }
+    return aiohttp.ClientSession(headers=headers)
+
+
 @dataclass
 class Response:
     text: bytes

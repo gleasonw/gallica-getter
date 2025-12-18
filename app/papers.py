@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import aiohttp
-from app.fetch import fetch_queries_concurrently
+from app.fetch import fetch_queries_concurrently, get_gallica_session
 from app.issues import Issues
 from app.utils.parse_xml import (
     get_paper_code_from_record_xml,
@@ -45,7 +45,7 @@ class Papers:
         session: aiohttp.ClientSession | None = None,
     ) -> List[PaperRecord]:
         if session is None:
-            async with aiohttp.ClientSession() as session:
+            async with get_gallica_session() as session:
                 return await Papers.get(arg_codes, get_all_results, session)
         if not arg_codes and get_all_results:
             # Fetch all results, indexing by the number of papers on Gallica. Lengthy fetch.

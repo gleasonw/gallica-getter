@@ -3,7 +3,7 @@ import urllib.parse
 
 import aiohttp
 from pydantic import BaseModel
-from app.fetch import fetch_queries_concurrently
+from app.fetch import fetch_queries_concurrently, get_gallica_session
 from app.queries import VolumeQuery
 
 from app.utils.base_query_builds import build_base_queries
@@ -75,7 +75,7 @@ class VolumeOccurrence:
         session: aiohttp.ClientSession | None = None,
     ) -> Generator[VolumeRecord, None, None]:
         if session is None:
-            async with aiohttp.ClientSession() as session:
+            async with get_gallica_session() as session:
                 local_args = locals()
                 del local_args["session"]
                 return await VolumeOccurrence.get(**local_args, session=session)

@@ -4,6 +4,7 @@ import time
 from typing import Dict, Literal, Optional
 
 import aiohttp
+from app.fetch import get_gallica_session
 from fastapi import HTTPException
 import pandas as pd
 from pydantic import BaseModel, validator
@@ -62,7 +63,7 @@ async def fetch_series_linked_term(input: GallicagramInput):
 
 async def do_dataframe_fetch(url: str, params: Dict):
     print(f"Fetching {url} with params {params}")
-    async with aiohttp.ClientSession() as session:
+    async with get_gallica_session() as session:
         start = time.time()
         async with session.get(url, params=params) as response:
             print(f"Fetched {response.url}")
