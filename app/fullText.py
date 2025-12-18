@@ -3,7 +3,7 @@ from typing import AsyncGenerator, List
 import aiohttp
 
 from bs4 import BeautifulSoup
-from app.fetch import fetch_queries_concurrently
+from app.fetch import fetch_queries_concurrently, get_gallica_session
 from app.queries import FullTextQuery
 
 
@@ -33,7 +33,7 @@ class FullText:
         ark_codes, session: aiohttp.ClientSession | None = None
     ) -> AsyncGenerator[ParsedGallicaHTML, None]:
         if session is None:
-            async with aiohttp.ClientSession() as session:
+            async with get_gallica_session() as session:
                 async for result in FullText.get(ark_codes=ark_codes, session=session):
                     yield result
 

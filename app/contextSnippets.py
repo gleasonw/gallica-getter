@@ -6,7 +6,7 @@ import urllib.parse
 import aiohttp
 from pydantic import BaseModel
 import pydantic
-from app.fetch import fetch_queries_concurrently
+from app.fetch import fetch_queries_concurrently, get_gallica_session
 
 
 @dataclass
@@ -84,7 +84,7 @@ class ContextSnippets:
         session: aiohttp.ClientSession | None = None,
     ) -> AsyncGenerator[ExtractRoot, None]:
         if session is None:
-            async with aiohttp.ClientSession() as session:
+            async with get_gallica_session() as session:
                 async for result in ContextSnippets.get(queries, session):
                     yield result
 
